@@ -38,6 +38,12 @@ const appState = {
     pricingView: 'catalog', // 'catalog' | 'cenada'
     activePriceListChannel: 'ALL',
     targetMarginSimPct: 30,
+    channelMargins: {
+        SUPERMERCADO: 24,
+        HORECA: 28,
+        MAYORISTA: 18,
+        DETALLE: 32
+    },
     pricingDiagFilter: 'ALL',
     catalog: [],
     cenadaList: [...CENADA_BENCHMARK],
@@ -67,7 +73,32 @@ let chartAbcInstance = null;
 // ============================================================================
 // INICIALIZACIÓN Y RESTAURACIÓN DE ESTADO LOCAL
 // ============================================================================
+function syncChannelMarginInputs() {
+    const map = [
+        { key: 'SUPERMERCADO', rId: 'rangeMarginSupermercado', nId: 'numMarginSupermercado' },
+        { key: 'HORECA', rId: 'rangeMarginHoreca', nId: 'numMarginHoreca' },
+        { key: 'MAYORISTA', rId: 'rangeMarginMayorista', nId: 'numMarginMayorista' },
+        { key: 'DETALLE', rId: 'rangeMarginDetalle', nId: 'numMarginDetalle' }
+    ];
+    map.forEach(({ key, rId, nId }) => {
+        const val = appState.channelMargins[key];
+        const rEl = document.getElementById(rId);
+        const nEl = document.getElementById(nId);
+        if (rEl) rEl.value = val;
+        if (nEl) nEl.value = val;
+    });
+}
+
 function initStateData() {
+    // Restaurar márgenes personalizados por tipo de cadena
+    try {
+        const savedMargins = localStorage.getItem('interfrutd_channel_margins');
+        if (savedMargins) {
+            appState.channelMargins = { ...appState.channelMargins, ...JSON.parse(savedMargins) };
+        }
+    } catch (e) {}
+    syncChannelMarginInputs();
+
     // Clonar catálogo base y aplicar precios personalizados si existen en localStorage
     let savedPriceOverrides = {};
     try {
@@ -108,16 +139,24 @@ function initStateData() {
 
 function recalcSkuMetrics(item) {
     const cost = item.costoReposicion > 0 ? item.costoReposicion : item.costoActual;
-    const price = item.precioDetalle > 0 ? item.precioDetalle : 1;
+    const mSuper = (appState.channelMargins.SUPERMERCADO || 24) / 100;
+    const mHoreca = (appState.channelMargins.HORECA || 28) / 100;
+    const mMayorista = (appState.channelMargins.MAYORISTA || 18) / 100;
+    const mDetalle = (appState.channelMargins.DETALLE || 32) / 100;
+
+    item.precioMayorista = Math.max(10, Math.round((cost / (1 - mMayorista)) / 5) * 5);
+    item.precioSupermercado = Math.max(15, Math.round((cost / (1 - mSuper)) / 5) * 5);
+    item.precioHoreca = Math.max(20, Math.round((cost / (1 - mHoreca)) / 5) * 5);
+    item.precioSugeridoMeta = Math.max(15, Math.round((cost / (1 - mDetalle)) / 5) * 5);
+
+    const price = item.precioDetalle > 0 ? item.precioDetalle : item.precioSugeridoMeta;
     item.margenReposicionPct = Math.round(((price - cost) / price) * 1000) / 10;
     item.margenActualPct = Math.round(((price - item.costoActual) / price) * 1000) / 10;
-    const targetM = appState.targetMarginSimPct / 100;
-    item.precioSugeridoMeta = Math.max(15, Math.round((cost / (1 - targetM)) / 5) * 5);
 
     if (item.margenReposicionPct < 16) item.estadoPrecio = 'MARGEN_CRITICO';
     else if (item.varCostoPct >= 6) item.estadoPrecio = 'COSTO_SUBIO';
     else if (item.precioCompetenciaMin > 0 && price > item.precioCompetenciaMin * 1.15) item.estadoPrecio = 'CARO_VS_COMPETENCIA';
-    else if (item.precioCompetenciaMin > 0 && price < item.precioCompetenciaMin * 0.85 && item.margenReposicionPct < appState.targetMarginSimPct) item.estadoPrecio = 'OPORTUNIDAD_PRECIO';
+    else if (item.precioCompetenciaMin > 0 && price < item.precioCompetenciaMin * 0.85 && item.margenReposicionPct < appState.channelMargins.DETALLE) item.estadoPrecio = 'OPORTUNIDAD_PRECIO';
     else item.estadoPrecio = 'OPTIMO';
 }
 
@@ -265,8 +304,7 @@ function renderPricingModule() {
                 </td>
                 <td><span class="badge badge-neutral">${escapeHtml(item.categoria)}</span></td>
                 <td class="center-col"><span class="abc-badge abc-${item.abcClass}">${item.abcClass}</span></td>
-                <td class="num-col">${formatCRC(item.costoActual)}</td>
-                <td class="num-col" style="font-weight:700;">${formatCRC(item.costoReposicion)}</td>
+                <td class="num-col" style="font-weight:700;" title="Costo directo de adquisición / Cost of Goods Sold">${formatCRC(item.costoReposicion > 0 ? item.costoReposicion : item.costoActual)}</td>
                 <td class="num-col">${varBadge}</td>
                 <td class="num-col" style="${highlightStyle('MAYORISTA')}">${formatCRC(item.precioMayorista)}</td>
                 <td class="num-col" style="${highlightStyle('SUPERMERCADO')}">${formatCRC(item.precioSupermercado)}</td>
@@ -998,15 +1036,43 @@ function setupEvents() {
         });
     }
 
-    const rangeMargin = document.getElementById('rangeTargetMargin');
-    const labelMargin = document.getElementById('labelTargetMarginVal');
-    if (rangeMargin) {
-        rangeMargin.addEventListener('input', () => {
-            appState.targetMarginSimPct = Number(rangeMargin.value);
-            if (labelMargin) labelMargin.textContent = `${appState.targetMarginSimPct}%`;
+    // Política de Márgenes por Tipo de Cadena
+    const chainControls = [
+        { key: 'SUPERMERCADO', name: 'Supermercados', r: 'rangeMarginSupermercado', n: 'numMarginSupermercado' },
+        { key: 'HORECA', name: 'HORECA / Food Service', r: 'rangeMarginHoreca', n: 'numMarginHoreca' },
+        { key: 'MAYORISTA', name: 'Mayoristas / CEDI', r: 'rangeMarginMayorista', n: 'numMarginMayorista' },
+        { key: 'DETALLE', name: 'Puntos de Venta / Detalle', r: 'rangeMarginDetalle', n: 'numMarginDetalle' }
+    ];
+
+    chainControls.forEach(({ key, name, r, n }) => {
+        const rEl = document.getElementById(r);
+        const nEl = document.getElementById(n);
+        if (!rEl || !nEl) return;
+
+        const updateMargin = (val, notify = false) => {
+            const num = parseInt(val, 10);
+            if (isNaN(num)) return;
+            const clamped = Math.max(parseInt(rEl.min, 10), Math.min(parseInt(rEl.max, 10), num));
+            appState.channelMargins[key] = clamped;
+            rEl.value = clamped;
+            nEl.value = clamped;
+
+            try {
+                localStorage.setItem('interfrutd_channel_margins', JSON.stringify(appState.channelMargins));
+            } catch (e) {}
+
+            appState.catalog.forEach(recalcSkuMetrics);
             renderPricingModule();
-        });
-    }
+
+            if (notify) {
+                showToast(`Margen meta para ${name} ajustado al ${clamped}%`, 'fa-sliders');
+            }
+        };
+
+        rEl.addEventListener('input', (e) => updateMargin(e.target.value, false));
+        rEl.addEventListener('change', (e) => updateMargin(e.target.value, true));
+        nEl.addEventListener('change', (e) => updateMargin(e.target.value, true));
+    });
 
     document.querySelectorAll('#pricingQuickChips .chip-btn').forEach(chip => {
         chip.addEventListener('click', () => {

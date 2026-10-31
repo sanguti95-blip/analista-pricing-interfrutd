@@ -36,7 +36,7 @@
                         <span class="role-pill">Comercial & Pricing</span>
                     </h1>
                     <p class="brand-subtitle">
-                        Gestión de Listas de Precios, Costos de Reposición, Cotizaciones B2B y Abastecimiento
+                        Estrategia de Precios, Costo de Ventas (COGS) y Cotizaciones B2B
                     </p>
                 </div>
             </div>
@@ -116,18 +116,90 @@
         <section id="panel-pricing" class="tab-panel active" role="tabpanel">
             <div class="kpi-grid" id="pricingKpiGrid"></div>
 
+            <!-- Panel de Configuración de Márgenes por Tipo de Cadena -->
+            <div class="chain-margin-panel" id="chainMarginPanel">
+                <div class="chain-margin-header">
+                    <div class="chain-margin-title">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Política de Márgenes por Tipo de Cadena</span>
+                    </div>
+                    <span class="chain-margin-hint">Modifica el margen de cualquier canal para recalcular automáticamente las listas de los 211 productos</span>
+                </div>
+                <div class="chain-grid">
+                    <!-- 1. Supermercados -->
+                    <div class="chain-card">
+                        <div class="chain-card-top">
+                            <span class="chain-card-name"><i class="fa-solid fa-store"></i> Cadenas Supermercados</span>
+                            <span class="chain-card-badge">AutoMercado / Walmart</span>
+                        </div>
+                        <div class="chain-control-wrap">
+                            <input type="range" class="chain-range" id="rangeMarginSupermercado" min="10" max="45" step="1" value="24">
+                            <div class="chain-val-wrap">
+                                <input type="number" class="chain-num-input" id="numMarginSupermercado" min="10" max="45" step="1" value="24">
+                                <span class="chain-unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. HORECA -->
+                    <div class="chain-card">
+                        <div class="chain-card-top">
+                            <span class="chain-card-name"><i class="fa-solid fa-hotel"></i> HORECA / Food Service</span>
+                            <span class="chain-card-badge">Hoteles / Restaurantes</span>
+                        </div>
+                        <div class="chain-control-wrap">
+                            <input type="range" class="chain-range" id="rangeMarginHoreca" min="15" max="50" step="1" value="28">
+                            <div class="chain-val-wrap">
+                                <input type="number" class="chain-num-input" id="numMarginHoreca" min="15" max="50" step="1" value="28">
+                                <span class="chain-unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Mayoristas -->
+                    <div class="chain-card">
+                        <div class="chain-card-top">
+                            <span class="chain-card-name"><i class="fa-solid fa-truck-moving"></i> Mayoristas / CEDI</span>
+                            <span class="chain-card-badge">CENADA / Ruteo</span>
+                        </div>
+                        <div class="chain-control-wrap">
+                            <input type="range" class="chain-range" id="rangeMarginMayorista" min="8" max="35" step="1" value="18">
+                            <div class="chain-val-wrap">
+                                <input type="number" class="chain-num-input" id="numMarginMayorista" min="8" max="35" step="1" value="18">
+                                <span class="chain-unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Detalle / Retail -->
+                    <div class="chain-card">
+                        <div class="chain-card-top">
+                            <span class="chain-card-name"><i class="fa-solid fa-shop"></i> Puntos de Venta / Detalle</span>
+                            <span class="chain-card-badge">Venta Directa</span>
+                        </div>
+                        <div class="chain-control-wrap">
+                            <input type="range" class="chain-range" id="rangeMarginDetalle" min="15" max="55" step="1" value="32">
+                            <div class="chain-val-wrap">
+                                <input type="number" class="chain-num-input" id="numMarginDetalle" min="15" max="55" step="1" value="32">
+                                <span class="chain-unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="section-card">
                 <div class="section-header">
                     <div class="section-title">
                         <i class="fa-solid fa-scale-balanced"></i>
-                        <span>Listas de Precios, Costos de Reposición y Benchmark</span>
+                        <span>Listas de Precios por Canal y Benchmark de Mercado</span>
                     </div>
                     <div class="filter-group">
                         <button type="button" class="btn btn-secondary btn-sm" id="btnSwitchMatrixView" data-view="catalog">
                             <i class="fa-solid fa-warehouse"></i> Comparativo CENADA (39)
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" id="btnApplySuggestedPrices" title="Aplicar el precio sugerido según margen meta a los productos con margen crítico">
-                            <i class="fa-solid fa-sliders" style="color:var(--brand-green);"></i> Ajustar Margen Meta
+                            <i class="fa-solid fa-sliders" style="color:var(--brand-green);"></i> Optimizar Margen Mínimo
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" id="btnExportPricingExcel">
                             <i class="fa-solid fa-file-excel"></i> Exportar Lista (.xlsx)
@@ -135,30 +207,24 @@
                     </div>
                 </div>
 
-                <!-- Controles de Lista de Precios, Simulador de Margen y Filtros de Diagnóstico -->
+                <!-- Controles de Lista de Precios y Filtros de Diagnóstico -->
                 <div class="toolbar-row" id="pricingControlsBar">
                     <div class="filter-group">
-                        <label style="font-size:12px; font-weight:700; color:var(--text-secondary);">Lista Activa:</label>
+                        <label style="font-size:12px; font-weight:700; color:var(--text-secondary);">Ver Canal:</label>
                         <select id="selectPriceListChannel" class="select-control" style="font-weight:700;">
-                            <option value="ALL">Matriz Completa (4 Listas + Supermercados)</option>
-                            <option value="HORECA">Lista HORECA / Food Service (Meta 28%)</option>
-                            <option value="SUPERMERCADO">Lista Supermercados / Cadenas (Meta 24%)</option>
-                            <option value="MAYORISTA">Lista Mayorista / CEDI (Meta 18%)</option>
-                            <option value="DETALLE">Lista Detalle / Punto de Venta</option>
+                            <option value="ALL">Matriz Completa (Todos los Canales + Supermercados)</option>
+                            <option value="SUPERMERCADO">Canal Supermercados / Cadenas</option>
+                            <option value="HORECA">Canal HORECA / Food Service</option>
+                            <option value="MAYORISTA">Canal Mayorista / CEDI</option>
+                            <option value="DETALLE">Canal Detalle / Punto de Venta</option>
                         </select>
-
-                        <div style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-elevated); padding:5px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
-                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Margen Meta:</span>
-                            <input type="range" id="rangeTargetMargin" min="15" max="50" step="1" value="30" style="accent-color:var(--brand-green); cursor:pointer;">
-                            <strong id="labelTargetMarginVal" style="font-size:13px; color:var(--brand-green); min-width:36px;">30%</strong>
-                        </div>
                     </div>
 
                     <div class="filter-group" id="pricingQuickChips">
                         <button type="button" class="chip-btn active" data-pfilter="ALL">Todos</button>
                         <button type="button" class="chip-btn" data-pfilter="MARGEN_CRITICO"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i> Margen Crítico (&lt;16%)</button>
-                        <button type="button" class="chip-btn" data-pfilter="COSTO_SUBIO"><i class="fa-solid fa-arrow-trend-up" style="color:var(--warning);"></i> Costo Subió</button>
-                        <button type="button" class="chip-btn" data-pfilter="OPORTUNIDAD_PRECIO"><i class="fa-solid fa-circle-up" style="color:var(--success);"></i> Oportunidad Alza</button>
+                        <button type="button" class="chip-btn" data-pfilter="COSTO_SUBIO"><i class="fa-solid fa-arrow-trend-up" style="color:var(--warning);"></i> Costo de Compra Subió</button>
+                        <button type="button" class="chip-btn" data-pfilter="OPORTUNIDAD_PRECIO"><i class="fa-solid fa-circle-up" style="color:var(--success);"></i> Oportunidad de Alza</button>
                         <button type="button" class="chip-btn" data-pfilter="CON_BENCHMARK"><i class="fa-solid fa-store" style="color:var(--info);"></i> Con Benchmark Supermercados</button>
                     </div>
                 </div>
@@ -172,9 +238,8 @@
                                 <th>Producto / Presentación</th>
                                 <th>Categoría</th>
                                 <th class="center-col">ABC</th>
-                                <th class="num-col">Costo Actual</th>
-                                <th class="num-col">Costo Reposición</th>
-                                <th class="num-col">Var. Costo</th>
+                                <th class="num-col" title="Costo directo de adquisición / Cost of Goods Sold">Costo Compra (COGS)</th>
+                                <th class="num-col" title="Variación reciente del costo de compra">Var. Costo</th>
                                 <th class="num-col">Mayorista</th>
                                 <th class="num-col">Supermercado</th>
                                 <th class="num-col">HORECA</th>
