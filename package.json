@@ -1,0 +1,10 @@
+{
+  "name": "interfrutd-commercial-pricing-suite",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Suite Corporativa de Inteligencia Comercial, Pricing, Cotizaciones B2B, Órdenes de Compra y Query Builder — INTERFRUTD (El Fruto Perfecto)",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 8090 -c-1 --cors -o"
+  }
+}
