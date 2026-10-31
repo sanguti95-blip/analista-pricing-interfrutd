@@ -58,17 +58,7 @@ const appState = {
     // Módulo 3: Órdenes de Compra, Ventas e Inventarios
     purchaseOrders: [],
     ocFilterStatus: 'ALL',
-    inventoryFilter: 'ALL',
-
-    // Módulo 4: Query Builder Comercial
-    qbPreset: 'criticos_abc_a',
-    qbDataset: 'MASTER_JOIN',
-    qbFilterField: 'margenReposicionPct',
-    qbFilterOp: '<',
-    qbFilterVal: '22',
-    qbGroupBy: 'NONE',
-    qbOrderBy: 'ventasMensualesCrc_DESC',
-    lastQueryExportRows: []
+    inventoryFilter: 'ALL'
 };
 
 let chartCatInstance = null;
@@ -631,6 +621,29 @@ function openQuotePrintModal() {
 // ============================================================================
 // MÓDULO 3: ÓRDENES DE COMPRA (OC), VENTAS, INVENTARIOS Y ANÁLISIS ABC
 // ============================================================================
+function renderOcStepper(status) {
+    if (status === 'ALERTA_STOCK') {
+        return `<span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> Alerta Stock Parcial</span>`;
+    }
+    const steps = [
+        { key: 'OC_RECIBIDA', label: '1. Recibida' },
+        { key: 'EN_ALISTAMIENTO', label: '2. Alistamiento' },
+        { key: 'EN_RUTA', label: '3. En Ruta' },
+        { key: 'ENTREGADA', label: '4. Entregada' }
+    ];
+    const curIdx = steps.findIndex(s => s.key === status);
+    return `
+        <div class="oc-stepper">
+            ${steps.map((st, i) => {
+                let cls = 'oc-step';
+                if (i === curIdx) cls += ' active';
+                else if (curIdx !== -1 && i < curIdx) cls += ' completed';
+                return `<span class="${cls}">${st.label}</span>`;
+            }).join('')}
+        </div>
+    `;
+}
+
 function renderOrdersAndInventoryModule() {
     const baseCatalog = getFilteredCatalog();
 
@@ -730,7 +743,7 @@ function renderOrdersAndInventoryModule() {
                     </td>
                     <td class="num-col" style="font-weight:700;">${formatCRC(monto)}</td>
                     <td class="num-col">${formatPct(margenOc, 1)}</td>
-                    <td>${stateBadge}</td>
+                    <td>${renderOcStepper(oc.estado)}</td>
                     <td class="center-col">
                         <button type="button" class="btn btn-secondary btn-sm btn-advance-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Avanzar al siguiente estado del flujo comercial">
                             <i class="fa-solid fa-forward-step"></i> Avanzar
@@ -899,321 +912,12 @@ function renderCommercialCharts(catalogList) {
 }
 
 // ============================================================================
-// MÓDULO 4: QUERY BUILDER COMERCIAL VISUAL & EXCEL AVANZADO
-// ============================================================================
-function applyQueryPreset(presetName) {
-    appState.qbPreset = presetName;
-    if (presetName === 'criticos_abc_a') {
-        appState.qbDataset = 'MASTER_JOIN';
-        appState.qbFilterField = 'margenReposicionPct';
-        appState.qbFilterOp = '<';
-        appState.qbFilterVal = '22';
-        appState.qbGroupBy = 'NONE';
-        appState.qbOrderBy = 'ventasMensualesCrc_DESC';
-    } else if (presetName === 'quiebre_stock') {
-        appState.qbDataset = 'MASTER_JOIN';
-        appState.qbFilterField = 'diasCobertura';
-        appState.qbFilterOp = '<=';
-        appState.qbFilterVal = '6';
-        appState.qbGroupBy = 'NONE';
-        appState.qbOrderBy = 'diasCobertura_ASC';
-    } else if (presetName === 'brecha_supermercados') {
-        appState.qbDataset = 'MASTER_JOIN';
-        appState.qbFilterField = 'precioCompetenciaMin';
-        appState.qbFilterOp = '>';
-        appState.qbFilterVal = '0';
-        appState.qbGroupBy = 'NONE';
-        appState.qbOrderBy = 'ventasMensualesCrc_DESC';
-    } else if (presetName === 'alza_costos') {
-        appState.qbDataset = 'MASTER_JOIN';
-        appState.qbFilterField = 'varCostoPct';
-        appState.qbFilterOp = '>=';
-        appState.qbFilterVal = '5';
-        appState.qbGroupBy = 'NONE';
-        appState.qbOrderBy = 'varCostoPct_DESC';
-    } else if (presetName === 'group_by_categoria') {
-        appState.qbDataset = 'MASTER_JOIN';
-        appState.qbFilterField = 'ALL';
-        appState.qbFilterOp = '>';
-        appState.qbFilterVal = '';
-        appState.qbGroupBy = 'categoria';
-        appState.qbOrderBy = 'ventasMensualesCrc_DESC';
-    } else if (presetName === 'catalogo_completo') {
-        appState.qbDataset = 'MASTER_JOIN';
-        appState.qbFilterField = 'ALL';
-        appState.qbFilterOp = '>';
-        appState.qbFilterVal = '';
-        appState.qbGroupBy = 'NONE';
-        appState.qbOrderBy = 'ventasMensualesCrc_DESC';
-    }
-
-    // Sincronizar selects del DOM
-    const ds = document.getElementById('qbDatasetSelect');
-    const ff = document.getElementById('qbFilterField');
-    const fo = document.getElementById('qbFilterOperator');
-    const fv = document.getElementById('qbFilterValue');
-    const gb = document.getElementById('qbGroupBySelect');
-    const ob = document.getElementById('qbOrderBySelect');
-
-    if (ds) ds.value = appState.qbDataset;
-    if (ff) ff.value = appState.qbFilterField;
-    if (fo) fo.value = appState.qbFilterOp;
-    if (fv) fv.value = appState.qbFilterVal;
-    if (gb) gb.value = appState.qbGroupBy;
-    if (ob) ob.value = appState.qbOrderBy;
-
-    renderQueryBuilderModule();
-}
-
-function evaluateCondition(rowVal, op, targetRaw) {
-    if (targetRaw === '' || targetRaw == null) return true;
-    const numRow = Number(rowVal);
-    const numTarget = Number(targetRaw);
-    const bothNumeric = !isNaN(numRow) && !isNaN(numTarget) && String(targetRaw).trim() !== '';
-
-    if (op === 'CONTAINS') {
-        return String(rowVal ?? '').toLowerCase().includes(String(targetRaw).toLowerCase());
-    }
-    if (op === '=') {
-        return bothNumeric ? numRow === numTarget : String(rowVal).toUpperCase() === String(targetRaw).trim().toUpperCase();
-    }
-    if (bothNumeric) {
-        if (op === '<') return numRow < numTarget;
-        if (op === '<=') return numRow <= numTarget;
-        if (op === '>') return numRow > numTarget;
-        if (op === '>=') return numRow >= numTarget;
-    }
-    return true;
-}
-
-function renderQueryBuilderModule() {
-    const thead = document.getElementById('qbResultsThead');
-    const tbody = document.getElementById('qbResultsTbody');
-    const sqlBox = document.getElementById('qbSqlPreview');
-    const statsBar = document.getElementById('qbExcelStatsBar');
-    if (!thead || !tbody || !sqlBox || !statsBar) return;
-
-    const ds = appState.qbDataset;
-    const field = appState.qbFilterField;
-    const op = appState.qbFilterOp;
-    const val = appState.qbFilterVal;
-    const groupBy = appState.qbGroupBy;
-    const orderBy = appState.qbOrderBy;
-
-    // Caso 1: Vista CENADA o Pipeline OCs
-    if (ds === 'CENADA_VIEW') {
-        sqlBox.textContent = `SELECT frumusaCod AS SKU, frumusaName AS Producto, frumusaUnit AS Presentacion, frumusaPrecioIva AS Precio_Interfrutd, cenadaModa AS Moda_CENADA, diffColones AS Brecha_CRC, verdict AS Posicion\nFROM vw_benchmark_mayorista_cenada\nORDER BY pctDiffModa ASC;`;
-        thead.innerHTML = `
-            <tr>
-                <th>SKU</th><th>Producto Mayorista</th><th>Presentación</th>
-                <th class="num-col">Precio Interfrutd</th><th class="num-col">Moda CENADA</th>
-                <th class="num-col">Diferencia (₡)</th><th class="num-col">Var %</th><th>Veredicto</th>
-            </tr>
-        `;
-        tbody.innerHTML = appState.cenadaList.map(r => `
-            <tr>
-                <td><code>${escapeHtml(r.frumusaCod)}</code></td>
-                <td style="font-weight:700;">${escapeHtml(r.frumusaName)}</td>
-                <td>${escapeHtml(r.frumusaUnit)}</td>
-                <td class="num-col">${formatCRC(r.frumusaPrecioIva)}</td>
-                <td class="num-col">${formatCRC(r.cenadaModa)}</td>
-                <td class="num-col">${formatCRC(r.diffColones)}</td>
-                <td class="num-col">${formatPct(r.pctDiffModa, 1)}</td>
-                <td><span class="badge badge-info">${escapeHtml(r.verdict)}</span></td>
-            </tr>
-        `).join('');
-        appState.lastQueryExportRows = appState.cenadaList;
-        statsBar.innerHTML = `<span>Filas consultadas: <strong>${appState.cenadaList.length}</strong> presentaciones mayoristas vs PIMA CENADA</span>`;
-        return;
-    }
-
-    if (ds === 'OC_PIPELINE') {
-        sqlBox.textContent = `SELECT ocNumero, cotizacionRef, clienteNombre, bodegaAsignada, fechaEntregaCompromiso, estado, prioridad\nFROM tbl_ordenes_compra_b2b\nORDER BY fechaEntregaCompromiso ASC;`;
-        thead.innerHTML = `
-            <tr>
-                <th>N° OC</th><th>Ref. Cotización</th><th>Cliente</th>
-                <th>Bodega</th><th>Compromiso</th><th>Prioridad</th><th>Estado</th>
-            </tr>
-        `;
-        tbody.innerHTML = appState.purchaseOrders.map(o => `
-            <tr>
-                <td><code>${escapeHtml(o.ocNumero)}</code></td>
-                <td>${escapeHtml(o.cotizacionRef)}</td>
-                <td style="font-weight:700;">${escapeHtml(o.clienteNombre)}</td>
-                <td>${escapeHtml(o.bodegaAsignada)}</td>
-                <td>${escapeHtml(o.fechaEntregaCompromiso)}</td>
-                <td><span class="badge badge-warning">${escapeHtml(o.prioridad)}</span></td>
-                <td><span class="badge badge-info">${escapeHtml(o.estado)}</span></td>
-            </tr>
-        `).join('');
-        appState.lastQueryExportRows = appState.purchaseOrders;
-        statsBar.innerHTML = `<span>Total Órdenes de Compra en Pipeline: <strong>${appState.purchaseOrders.length}</strong></span>`;
-        return;
-    }
-
-    // Caso Principal: JOIN Maestro (Pricing + Ventas + Costos + Inventario + ABC)
-    let rows = getFilteredCatalog().filter(item => {
-        if (appState.qbPreset === 'criticos_abc_a' && field === 'margenReposicionPct' && val === '22') {
-            return item.abcClass === 'A' && item.margenReposicionPct < 22;
-        }
-        if (field === 'ALL') return true;
-        return evaluateCondition(item[field], op, val);
-    });
-
-    const [sortField, sortDir] = orderBy.split('_');
-    rows.sort((a, b) => {
-        const va = Number(a[sortField]) || 0;
-        const vb = Number(b[sortField]) || 0;
-        return sortDir === 'ASC' ? va - vb : vb - va;
-    });
-
-    const whereClause = field !== 'ALL' && val !== ''
-        ? `\nWHERE ${field} ${op} '${val}'${appState.qbPreset === 'criticos_abc_a' ? " AND abcClass = 'A'" : ''}`
-        : '';
-
-    // Si hay GROUP BY activo
-    if (groupBy !== 'NONE') {
-        sqlBox.textContent = `SELECT ${groupBy}, COUNT(sku) AS Total_SKUs, SUM(stockTotal) AS Stock_Unidades, SUM(ventasMensualesCrc) AS Ventas_Mensuales_CRC, SUM(utilidadMensualCrc) AS Utilidad_CRC, ROUND(AVG(margenReposicionPct), 1) AS Margen_Promedio_Pct\nFROM vw_interfrutd_comercial_pricing${whereClause}\nGROUP BY ${groupBy}\nORDER BY Ventas_Mensuales_CRC DESC;`;
-
-        const groups = {};
-        rows.forEach(r => {
-            const key = r[groupBy] || 'Sin Definir';
-            if (!groups[key]) {
-                groups[key] = { grupo: key, skus: 0, stock: 0, ventas: 0, utilidad: 0, sumMargin: 0 };
-            }
-            groups[key].skus += 1;
-            groups[key].stock += r.stockTotal;
-            groups[key].ventas += r.ventasMensualesCrc;
-            groups[key].utilidad += r.utilidadMensualCrc;
-            groups[key].sumMargin += r.margenReposicionPct;
-        });
-
-        const groupRows = Object.values(groups).map(g => ({
-            Grupo: g.grupo,
-            Total_SKUs: g.skus,
-            Stock_Total: Math.round(g.stock),
-            Ventas_Mensuales_CRC: g.ventas,
-            Utilidad_Bruta_CRC: g.utilidad,
-            Margen_Promedio_Pct: g.skus > 0 ? Math.round((g.sumMargin / g.skus) * 10) / 10 : 0
-        })).sort((a, b) => b.Ventas_Mensuales_CRC - a.Ventas_Mensuales_CRC);
-
-        appState.lastQueryExportRows = groupRows;
-
-        thead.innerHTML = `
-            <tr>
-                <th>Grupo (${escapeHtml(groupBy)})</th>
-                <th class="num-col">COUNT(SKUs)</th>
-                <th class="num-col">SUM(Stock Total)</th>
-                <th class="num-col">SUM(Ventas Mensuales)</th>
-                <th class="num-col">SUM(Utilidad Bruta)</th>
-                <th class="num-col">AVG(Margen Bruto %)</th>
-            </tr>
-        `;
-        tbody.innerHTML = groupRows.map(g => `
-            <tr>
-                <td style="font-weight:800; color:var(--brand-green);">${escapeHtml(g.Grupo)}</td>
-                <td class="num-col">${formatNum(g.Total_SKUs)}</td>
-                <td class="num-col">${formatNum(g.Stock_Total)}</td>
-                <td class="num-col" style="font-weight:700;">${formatCRC(g.Ventas_Mensuales_CRC)}</td>
-                <td class="num-col" style="color:var(--success); font-weight:700;">${formatCRC(g.Utilidad_Bruta_CRC)}</td>
-                <td class="num-col"><span class="badge badge-info">${formatPct(g.Margen_Promedio_Pct, 1)}</span></td>
-            </tr>
-        `).join('');
-
-        const totalSalesG = groupRows.reduce((s, x) => s + x.Ventas_Mensuales_CRC, 0);
-        statsBar.innerHTML = `
-            <span>Grupos resultantes: <strong>${groupRows.length}</strong></span>
-            <span>SKUs procesados: <strong>${rows.length}</strong></span>
-            <span>Suma Ventas: <strong style="color:var(--brand-lime);">${formatCRC(totalSalesG)}</strong></span>
-        `;
-        return;
-    }
-
-    // Sin agrupar: Detalle de SKUs
-    sqlBox.textContent = `SELECT sku, name, categoria, abcClass, costoReposicion, precioHoreca, precioDetalle, margenReposicionPct, precioCompetenciaMin, stockTotal, diasCobertura, ventasMensualesCrc\nFROM vw_interfrutd_comercial_pricing${whereClause}\nORDER BY ${sortField} ${sortDir};`;
-
-    appState.lastQueryExportRows = rows.map(r => ({
-        SKU: r.sku,
-        Producto: r.name,
-        Categoria: r.categoria,
-        ABC: r.abcClass,
-        Costo_Actual_CRC: r.costoActual,
-        Costo_Reposicion_CRC: r.costoReposicion,
-        Var_Costo_Pct: r.varCostoPct,
-        Precio_Mayorista_CRC: r.precioMayorista,
-        Precio_Horeca_CRC: r.precioHoreca,
-        Precio_Detalle_CRC: r.precioDetalle,
-        Margen_Real_Pct: r.margenReposicionPct,
-        Min_Supermercados_CRC: r.precioCompetenciaMin,
-        Stock_Total: r.stockTotal,
-        Dias_Cobertura: r.diasCobertura,
-        Ventas_Mensuales_CRC: r.ventasMensualesCrc,
-        Utilidad_Mensual_CRC: r.utilidadMensualCrc
-    }));
-
-    thead.innerHTML = `
-        <tr>
-            <th>SKU</th>
-            <th>Producto</th>
-            <th>Categoría</th>
-            <th class="center-col">ABC</th>
-            <th class="num-col">Costo Repos.</th>
-            <th class="num-col">Var Costo</th>
-            <th class="num-col">Precio HORECA</th>
-            <th class="num-col">Precio Detalle</th>
-            <th class="num-col">Margen %</th>
-            <th class="num-col">Mín. Superm.</th>
-            <th class="num-col">Stock Total</th>
-            <th class="num-col">Cobertura</th>
-            <th class="num-col">Ventas Mensuales</th>
-        </tr>
-    `;
-
-    tbody.innerHTML = rows.map(r => `
-        <tr>
-            <td><code style="font-weight:700; color:var(--brand-green);">${escapeHtml(r.sku)}</code></td>
-            <td style="font-weight:700;">${escapeHtml(r.name)}</td>
-            <td><span class="badge badge-neutral">${escapeHtml(r.categoria)}</span></td>
-            <td class="center-col"><span class="abc-badge abc-${r.abcClass}">${r.abcClass}</span></td>
-            <td class="num-col">${formatCRC(r.costoReposicion)}</td>
-            <td class="num-col">${r.varCostoPct > 0 ? '+' : ''}${formatPct(r.varCostoPct, 1)}</td>
-            <td class="num-col">${formatCRC(r.precioHoreca)}</td>
-            <td class="num-col" style="font-weight:700;">${formatCRC(r.precioDetalle)}</td>
-            <td class="num-col">
-                <span class="badge ${r.margenReposicionPct < 18 ? 'badge-danger' : 'badge-success'}">${formatPct(r.margenReposicionPct, 1)}</span>
-            </td>
-            <td class="num-col">${r.precioCompetenciaMin > 0 ? formatCRC(r.precioCompetenciaMin) : '—'}</td>
-            <td class="num-col">${formatNum(r.stockTotal)}</td>
-            <td class="num-col">${formatNum(r.diasCobertura, 1)} d</td>
-            <td class="num-col" style="font-weight:700;">${formatCRC(r.ventasMensualesCrc)}</td>
-        </tr>
-    `).join('');
-
-    const sumSales = rows.reduce((s, x) => s + x.ventasMensualesCrc, 0);
-    const sumProfit = rows.reduce((s, x) => s + x.utilidadMensualCrc, 0);
-    const avgMargin = rows.length > 0 ? rows.reduce((s, x) => s + x.margenReposicionPct, 0) / rows.length : 0;
-    const sumStock = rows.reduce((s, x) => s + x.stockTotal, 0);
-
-    statsBar.innerHTML = `
-        <div style="display:flex; gap:16px; flex-wrap:wrap;">
-            <span><i class="fa-solid fa-table"></i> Recuento: <strong>${rows.length} SKUs</strong></span>
-            <span>Σ Ventas: <strong style="color:var(--brand-lime);">${formatCRC(sumSales)}</strong></span>
-            <span>Σ Utilidad: <strong style="color:var(--success);">${formatCRC(sumProfit)}</strong></span>
-            <span>x̄ Margen Promedio: <strong>${formatPct(avgMargin, 1)}</strong></span>
-            <span>Σ Unidades en Stock: <strong>${formatNum(sumStock)}</strong></span>
-        </div>
-        <span style="color:var(--text-muted); font-size:11.5px;">Motor Query Builder SQL + SheetJS Activo</span>
-    `;
-}
-
-// ============================================================================
 // RENDERIZADO GLOBAL Y EVENTOS DE INTERFAZ
 // ============================================================================
 function renderActiveModule() {
     renderPricingModule();
     if (appState.activeTab === 'cotizaciones') renderQuotesModule();
     if (appState.activeTab === 'ordenes') renderOrdersAndInventoryModule();
-    if (appState.activeTab === 'query-builder') renderQueryBuilderModule();
 }
 
 function setupEvents() {
@@ -1397,7 +1101,7 @@ function setupEvents() {
             });
             renderPricingModule();
             if (count > 0) {
-                showToast(`${count} SKUs críticos optimizados al margen meta (+${formatCRC(monthlyGain)}/mes de utilidad)`, 'fa-wand-magic-sparkles');
+                showToast(`${count} SKUs ajustados al margen meta (+${formatCRC(monthlyGain)}/mes de utilidad)`, 'fa-sliders');
             } else {
                 showToast('No hay SKUs con margen crítico (<16%) pendientes de optimizar.', 'fa-check');
             }
@@ -1734,48 +1438,6 @@ function setupEvents() {
     }
 
     // ------------------------------------------------------------------------
-    // Eventos Módulo 4: Query Builder Comercial
-    // ------------------------------------------------------------------------
-    document.querySelectorAll('#qbPresetButtons .chip-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('#qbPresetButtons .chip-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            applyQueryPreset(btn.getAttribute('data-preset'));
-        });
-    });
-
-    ['qbDatasetSelect', 'qbFilterField', 'qbFilterOperator', 'qbFilterValue', 'qbGroupBySelect', 'qbOrderBySelect'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', () => {
-                appState.qbDataset = document.getElementById('qbDatasetSelect')?.value || 'MASTER_JOIN';
-                appState.qbFilterField = document.getElementById('qbFilterField')?.value || 'ALL';
-                appState.qbFilterOp = document.getElementById('qbFilterOperator')?.value || '<';
-                appState.qbFilterVal = document.getElementById('qbFilterValue')?.value || '';
-                appState.qbGroupBy = document.getElementById('qbGroupBySelect')?.value || 'NONE';
-                appState.qbOrderBy = document.getElementById('qbOrderBySelect')?.value || 'ventasMensualesCrc_DESC';
-                renderQueryBuilderModule();
-            });
-        }
-    });
-
-    const btnCopySql = document.getElementById('btnCopyGeneratedSql');
-    if (btnCopySql) {
-        btnCopySql.addEventListener('click', () => {
-            const sql = document.getElementById('qbSqlPreview')?.textContent || '';
-            navigator.clipboard?.writeText(sql);
-            showToast('Consulta SQL copiada al portapapeles', 'fa-copy');
-        });
-    }
-
-    const btnExportQb = document.getElementById('btnExportQueryExcel');
-    if (btnExportQb) {
-        btnExportQb.addEventListener('click', () => {
-            exportRowsToExcel(appState.lastQueryExportRows, 'Query_Builder_Result', 'Interfrutd_QueryBuilder_Export.xlsx');
-        });
-    }
-
-    // ------------------------------------------------------------------------
     // Importación y Exportación Corporativa Completa (.xlsx)
     // ------------------------------------------------------------------------
     const btnUploadExcel = document.getElementById('btnUploadExcelCatalog');
@@ -1856,6 +1518,5 @@ function setupEvents() {
 document.addEventListener('DOMContentLoaded', () => {
     initStateData();
     setupEvents();
-    applyQueryPreset('criticos_abc_a');
     renderActiveModule();
 });

@@ -31,15 +31,10 @@ Proyecto demostrativo de alto impacto diseñado para el puesto de **Analista Com
   - `< 16%`: Alerta de Margen Crítico
 - **Vista Previa / Impresión PDF con membrete oficial INTERFRUTD**, exportación a Excel y **conversión en 1 clic a Orden de Compra (OC)**.
 
-### 3. 🚚 Seguimiento de Órdenes de Compra (OC), Ventas, Inventarios y ABC (`Órdenes de Compra, Ventas & Inventarios`)
-- **Pipeline de Órdenes de Compra (OC)**: Seguimiento por etapa (`OC_RECIBIDA` → `EN_ALISTAMIENTO` → `EN_RUTA` → `ENTREGADA`), con cálculo automático de **Fill Rate (Nivel de Servicio %)**.
+### 3. 🚚 Seguimiento de Órdenes de Compra (OC), Ventas, Inventarios y ABC (`Órdenes de Compra & Inventarios`)
+- **Pipeline de Órdenes de Compra (OC)**: Seguimiento visual por etapa (`OC_RECIBIDA` → `EN_ALISTAMIENTO` → `EN_RUTA` → `ENTREGADA`), con cálculo automático de **Fill Rate (Nivel de Servicio %)**.
 - **Control de Inventarios Multi-Bodega**: Existencias en `CEDI Central 400`, `Bodega Comercial 401` y `Ruta 402`, velocidad de venta mensual, **Días de Cobertura** y alertas de **Punto de Reorden (<= 5 días)**.
-- **Análisis de Pareto ABC (80/15/5)** y gráficos ejecutivos interactivos.
-
-### 4. 🗄️ Query Builder Comercial Visual & Excel Avanzado (`Query Builder & Excel Avanzado`)
-- Constructor interactivo de consultas (`SELECT`, `FROM`, `WHERE`, `GROUP BY`, `ORDER BY`) con **generación de sentencia SQL en tiempo real**.
-- **6 Consultas Ejecutivas Preconfiguradas en 1 Clic** para responder preguntas de negocio durante la entrevista.
-- **Barra de estado estilo Excel Avanzado** (`Recuento`, `Σ Ventas`, `Σ Utilidad`, `x̄ Margen Promedio`, `Σ Stock`) y exportación directa a `.xlsx` (SheetJS).
+- **Análisis de Pareto ABC (80/15/5)** y gráficos comerciales interactivos.
 
 ---
 

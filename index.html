@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTERFRUTD · Analista Comercial & Pricing | Suite de Inteligencia de Negocios</title>
+    <title>INTERFRUTD · Suite Comercial y Pricing</title>
 
-    <!-- Google Fonts: Outfit & JetBrains Mono -->
+    <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Chart.js & SheetJS (Excel Avanzado) -->
@@ -33,10 +33,10 @@
                 <div class="brand-titles">
                     <h1>
                         INTERFRUTD
-                        <span class="role-pill"><i class="fa-solid fa-chart-line"></i> Analista Comercial y Pricing</span>
+                        <span class="role-pill">Comercial & Pricing</span>
                     </h1>
                     <p class="brand-subtitle">
-                        Convierte los datos en estrategias que impulsan el crecimiento del negocio · Precios, Costos, Cotizaciones, Inventarios y Query Builder
+                        Gestión de Listas de Precios, Costos de Reposición, Cotizaciones B2B y Abastecimiento
                     </p>
                 </div>
             </div>
@@ -44,7 +44,7 @@
             <div class="header-actions">
                 <div class="global-search-wrap">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Buscar SKU, fruta, vegetal o cliente (Ctrl+K)...">
+                    <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Buscar por SKU, producto o cliente (Ctrl+K)...">
                 </div>
 
                 <button type="button" class="btn btn-secondary" id="btnUploadExcelCatalog" title="Importar Lista de Precios o Costos desde Excel (.xlsx)">
@@ -53,10 +53,10 @@
                 <input type="file" id="inputExcelUpload" accept=".xlsx,.xls,.csv" style="display:none;">
 
                 <button type="button" class="btn btn-lime" id="btnExportFullWorkbook" title="Descargar Libro Maestro en Excel con Precios, Cotizaciones, OCs e Inventario">
-                    <i class="fa-solid fa-download"></i> Exportar Reporte Corporativo (.xlsx)
+                    <i class="fa-solid fa-download"></i> Exportar Libro (.xlsx)
                 </button>
 
-                <button type="button" class="btn btn-secondary" id="btnToggleTheme" title="Alternar Modo Oscuro / Claro Corporativo">
+                <button type="button" class="btn btn-secondary" id="btnToggleTheme" title="Alternar Modo Oscuro / Claro">
                     <i class="fa-solid fa-sun" id="iconThemeToggle"></i>
                 </button>
             </div>
@@ -83,29 +83,23 @@
 
                 <button type="button" class="module-tab-btn" data-tab="ordenes" role="tab" aria-selected="false">
                     <i class="fa-solid fa-truck-fast"></i>
-                    <span>3. Órdenes de Compra, Ventas & Inventarios</span>
+                    <span>3. Órdenes de Compra & Inventarios</span>
                     <span class="tab-counter" id="badgeCountOC">5</span>
-                </button>
-
-                <button type="button" class="module-tab-btn" data-tab="query-builder" role="tab" aria-selected="false">
-                    <i class="fa-solid fa-database"></i>
-                    <span>4. Query Builder & Excel Avanzado</span>
-                    <span class="tab-counter">SQL/BI</span>
                 </button>
             </div>
 
             <div class="global-filter-strip">
-                <label for="globalCategoryFilter" style="font-size:11.5px; color:var(--text-muted); font-weight:600;">Categoría:</label>
+                <label for="globalCategoryFilter" class="filter-label">Categoría:</label>
                 <select id="globalCategoryFilter" class="select-control">
                     <option value="ALL">Todas las Categorías</option>
                 </select>
 
-                <label for="globalAbcFilter" style="font-size:11.5px; color:var(--text-muted); font-weight:600;">Pareto ABC:</label>
+                <label for="globalAbcFilter" class="filter-label">Pareto ABC:</label>
                 <select id="globalAbcFilter" class="select-control">
                     <option value="ALL">Todos (A + B + C)</option>
-                    <option value="A">Clase A (80% Ventas)</option>
-                    <option value="B">Clase B (15% Ventas)</option>
-                    <option value="C">Clase C (5% Ventas)</option>
+                    <option value="A">Clase A (Top 80%)</option>
+                    <option value="B">Clase B (15%)</option>
+                    <option value="C">Clase C (5%)</option>
                 </select>
             </div>
         </div>
@@ -124,24 +118,19 @@
 
             <div class="section-card">
                 <div class="section-header">
-                    <div>
-                        <div class="section-title">
-                            <i class="fa-solid fa-scale-balanced"></i>
-                            <span>Gestor Maestro de Listas de Precios, Costos de Reposición y Benchmark de Mercado</span>
-                        </div>
-                        <p class="section-desc">
-                            Actualización en vivo de listas por canal (Mayorista, Supermercados, HORECA y Detalle), simulación de margen meta y comparativa contra Auto Mercado, Walmart, Más x Menos y PIMA CENADA.
-                        </p>
+                    <div class="section-title">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                        <span>Listas de Precios, Costos de Reposición y Benchmark</span>
                     </div>
                     <div class="filter-group">
                         <button type="button" class="btn btn-secondary btn-sm" id="btnSwitchMatrixView" data-view="catalog">
-                            <i class="fa-solid fa-warehouse"></i> Ver Comparativo Cajas PIMA CENADA (39)
+                            <i class="fa-solid fa-warehouse"></i> Comparativo CENADA (39)
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" id="btnApplySuggestedPrices" title="Aplicar el precio sugerido según margen meta a los productos con margen crítico">
-                            <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--brand-green);"></i> Optimizar Precios Críticos
+                            <i class="fa-solid fa-sliders" style="color:var(--brand-green);"></i> Ajustar Margen Meta
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" id="btnExportPricingExcel">
-                            <i class="fa-solid fa-file-excel"></i> Exportar Lista Activa (.xlsx)
+                            <i class="fa-solid fa-file-excel"></i> Exportar Lista (.xlsx)
                         </button>
                     </div>
                 </div>
@@ -159,7 +148,7 @@
                         </select>
 
                         <div style="display:inline-flex; align-items:center; gap:8px; background:var(--bg-elevated); padding:5px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
-                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Margen Meta Simulador:</span>
+                            <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Margen Meta:</span>
                             <input type="range" id="rangeTargetMargin" min="15" max="50" step="1" value="30" style="accent-color:var(--brand-green); cursor:pointer;">
                             <strong id="labelTargetMarginVal" style="font-size:13px; color:var(--brand-green); min-width:36px;">30%</strong>
                         </div>
@@ -168,8 +157,8 @@
                     <div class="filter-group" id="pricingQuickChips">
                         <button type="button" class="chip-btn active" data-pfilter="ALL">Todos</button>
                         <button type="button" class="chip-btn" data-pfilter="MARGEN_CRITICO"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i> Margen Crítico (&lt;16%)</button>
-                        <button type="button" class="chip-btn" data-pfilter="COSTO_SUBIO"><i class="fa-solid fa-arrow-trend-up" style="color:var(--warning);"></i> Costo Reposición Subió</button>
-                        <button type="button" class="chip-btn" data-pfilter="OPORTUNIDAD_PRECIO"><i class="fa-solid fa-circle-up" style="color:var(--success);"></i> Oportunidad Subir Precio</button>
+                        <button type="button" class="chip-btn" data-pfilter="COSTO_SUBIO"><i class="fa-solid fa-arrow-trend-up" style="color:var(--warning);"></i> Costo Subió</button>
+                        <button type="button" class="chip-btn" data-pfilter="OPORTUNIDAD_PRECIO"><i class="fa-solid fa-circle-up" style="color:var(--success);"></i> Oportunidad Alza</button>
                         <button type="button" class="chip-btn" data-pfilter="CON_BENCHMARK"><i class="fa-solid fa-store" style="color:var(--info);"></i> Con Benchmark Supermercados</button>
                     </div>
                 </div>
@@ -186,14 +175,14 @@
                                 <th class="num-col">Costo Actual</th>
                                 <th class="num-col">Costo Reposición</th>
                                 <th class="num-col">Var. Costo</th>
-                                <th class="num-col">Lista Mayorista</th>
-                                <th class="num-col">Lista Superm.</th>
-                                <th class="num-col">Lista HORECA</th>
-                                <th class="num-col">Precio Detalle (Editable)</th>
+                                <th class="num-col">Mayorista</th>
+                                <th class="num-col">Supermercado</th>
+                                <th class="num-col">HORECA</th>
+                                <th class="num-col">Detalle (Editable)</th>
                                 <th class="num-col">Margen Real</th>
-                                <th class="num-col">Precio Sugerido</th>
-                                <th class="num-col">Min. Supermercados</th>
-                                <th>Diagnóstico Pricing</th>
+                                <th class="num-col">Sugerido</th>
+                                <th class="num-col">Mín. Superm.</th>
+                                <th>Estado</th>
                                 <th class="center-col">Cotizar</th>
                             </tr>
                         </thead>
@@ -235,14 +224,9 @@
                 <!-- Constructor de Cotización en Vivo -->
                 <div class="section-card">
                     <div class="section-header">
-                        <div>
-                            <div class="section-title">
-                                <i class="fa-solid fa-file-signature"></i>
-                                <span id="quoteBuilderTitle">Constructor de Cotización Comercial B2B</span>
-                            </div>
-                            <p class="section-desc">
-                                Simulación de margen bruto en tiempo real, escalas de descuento y validación de stock disponible antes de ofertar.
-                            </p>
+                        <div class="section-title">
+                            <i class="fa-solid fa-file-signature"></i>
+                            <span id="quoteBuilderTitle">Cotizador Comercial B2B</span>
                         </div>
                         <div class="filter-group">
                             <button type="button" class="btn btn-secondary btn-sm" id="btnNewBlankQuote">
@@ -252,7 +236,7 @@
                                 <i class="fa-solid fa-print"></i> Vista Previa / PDF
                             </button>
                             <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuote">
-                                <i class="fa-solid fa-floppy-disk"></i> Guardar Cotización
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar
                             </button>
                         </div>
                     </div>
@@ -264,7 +248,7 @@
                             <select id="quoteClientSelect" class="select-control" style="width:100%;"></select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Lista de Precios Base</label>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Lista Base</label>
                             <select id="quotePriceListSelect" class="select-control" style="width:100%;">
                                 <option value="HORECA">Lista HORECA / Food Service</option>
                                 <option value="SUPERMERCADO">Lista Supermercados / Cadenas</option>
@@ -273,7 +257,7 @@
                             </select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Vigencia de Oferta</label>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Vigencia</label>
                             <input type="date" id="quoteValidUntil" class="input-control" style="width:100%;" value="2026-11-08">
                         </div>
                         <div>
@@ -302,9 +286,9 @@
                                     <th>SKU</th>
                                     <th>Producto</th>
                                     <th class="center-col">Und</th>
-                                    <th class="num-col">Stock Disp.</th>
+                                    <th class="num-col">Stock</th>
                                     <th class="num-col">Cantidad</th>
-                                    <th class="num-col">Costo Unit.</th>
+                                    <th class="num-col">Costo</th>
                                     <th class="num-col">Precio Lista</th>
                                     <th class="num-col">Desc %</th>
                                     <th class="num-col">Precio Ofertado</th>
@@ -327,14 +311,9 @@
                 <!-- Historial de Cotizaciones & Conversión a Orden de Compra -->
                 <div class="section-card">
                     <div class="section-header">
-                        <div>
-                            <div class="section-title">
-                                <i class="fa-solid fa-folder-open"></i>
-                                <span>Cartera de Cotizaciones Activas</span>
-                            </div>
-                            <p class="section-desc">
-                                Seguimiento de propuestas enviadas a clientes y conversión en 1 clic a Orden de Compra (OC).
-                            </p>
+                        <div class="section-title">
+                            <i class="fa-solid fa-folder-open"></i>
+                            <span>Cartera de Cotizaciones</span>
                         </div>
                         <button type="button" class="btn btn-secondary btn-sm" id="btnExportQuotesExcel">
                             <i class="fa-solid fa-file-excel"></i> Exportar Cartera
@@ -352,13 +331,13 @@
         <section id="panel-ordenes" class="tab-panel" role="tabpanel">
             <div class="kpi-grid" id="ordersKpiGrid"></div>
 
-            <!-- Gráficos Ejecutivos de Ventas, Margen por Categoría y Pareto ABC -->
+            <!-- Gráficos de Ventas, Margen por Categoría y Pareto ABC -->
             <div class="charts-grid-2">
                 <div class="section-card" style="margin-bottom:0;">
                     <div class="section-header">
                         <div class="section-title">
                             <i class="fa-solid fa-chart-column"></i>
-                            <span>Ventas Mensuales vs Margen Bruto (%) por Categoría</span>
+                            <span>Ventas Mensuales vs Margen (%) por Categoría</span>
                         </div>
                     </div>
                     <div style="height:260px; position:relative;">
@@ -370,7 +349,7 @@
                     <div class="section-header">
                         <div class="section-title">
                             <i class="fa-solid fa-chart-pie"></i>
-                            <span>Estructura de Inventario por Bodega & Pareto ABC (80/15/5)</span>
+                            <span>Estructura de Inventario & Pareto ABC</span>
                         </div>
                     </div>
                     <div style="height:260px; position:relative;">
@@ -382,19 +361,14 @@
             <!-- Seguimiento de Órdenes de Compra (OC) y Nivel de Servicio (Fill Rate) -->
             <div class="section-card">
                 <div class="section-header">
-                    <div>
-                        <div class="section-title">
-                            <i class="fa-solid fa-clipboard-check"></i>
-                            <span>Seguimiento de Órdenes de Compra (OC) y Procesos Comerciales</span>
-                        </div>
-                        <p class="section-desc">
-                            Control de extremo a extremo desde recepción de OC hasta facturación, con auditoría de Fill Rate (Pedida vs Despachada) y alertas de stock.
-                        </p>
+                    <div class="section-title">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        <span>Pipeline de Órdenes de Compra (OC)</span>
                     </div>
                     <div class="filter-group" id="ocStatusFilterGroup">
-                        <button type="button" class="chip-btn active" data-ocfilter="ALL">Todas las OCs</button>
-                        <button type="button" class="chip-btn" data-ocfilter="OC_RECIBIDA">OC Recibida</button>
-                        <button type="button" class="chip-btn" data-ocfilter="EN_ALISTAMIENTO">En Alistamiento</button>
+                        <button type="button" class="chip-btn active" data-ocfilter="ALL">Todas</button>
+                        <button type="button" class="chip-btn" data-ocfilter="OC_RECIBIDA">Recibida</button>
+                        <button type="button" class="chip-btn" data-ocfilter="EN_ALISTAMIENTO">Alistamiento</button>
                         <button type="button" class="chip-btn" data-ocfilter="EN_RUTA">En Ruta</button>
                         <button type="button" class="chip-btn" data-ocfilter="ENTREGADA">Entregada</button>
                         <button type="button" class="chip-btn" data-ocfilter="ALERTA_STOCK">Alerta Stock</button>
@@ -405,18 +379,18 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>N° Orden (OC)</th>
+                                <th>N° Orden</th>
                                 <th>Ref. Cotización</th>
                                 <th>Cliente Corporativo</th>
-                                <th>Bodega Asignada</th>
+                                <th>Bodega</th>
                                 <th>Fecha Compromiso</th>
-                                <th class="num-col">Unidades Pedidas</th>
+                                <th class="num-col">Pedidas</th>
                                 <th class="num-col">Despachadas</th>
-                                <th class="num-col">Fill Rate (%)</th>
+                                <th class="num-col">Fill Rate</th>
                                 <th class="num-col">Monto OC (₡)</th>
                                 <th class="num-col">Margen OC</th>
-                                <th>Estado del Proceso</th>
-                                <th class="center-col">Avanzar Etapa</th>
+                                <th>Flujo de Proceso</th>
+                                <th class="center-col">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="purchaseOrdersTableBody"></tbody>
@@ -427,21 +401,16 @@
             <!-- Control de Inventario, Rotación, Cobertura y Punto de Reorden -->
             <div class="section-card">
                 <div class="section-header">
-                    <div>
-                        <div class="section-title">
-                            <i class="fa-solid fa-boxes-stacked"></i>
-                            <span>Análisis de Inventarios, Rotación Comercial, Días de Cobertura y Clasificación ABC</span>
-                        </div>
-                        <p class="section-desc">
-                            Monitoreo de existencias entre CEDI Central (400), Bodega Comercial (401) y Ruta (402) frente a la velocidad de venta diaria.
-                        </p>
+                    <div class="section-title">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <span>Inventarios, Días de Cobertura y Clasificación ABC</span>
                     </div>
                     <div class="filter-group">
-                        <button type="button" class="chip-btn active" data-invfilter="ALL">Todo el Inventario</button>
-                        <button type="button" class="chip-btn" data-invfilter="REORDEN"><i class="fa-solid fa-bell" style="color:var(--danger);"></i> Bajo Punto de Reorden (&le;5 días)</button>
+                        <button type="button" class="chip-btn active" data-invfilter="ALL">Todo</button>
+                        <button type="button" class="chip-btn" data-invfilter="REORDEN"><i class="fa-solid fa-bell" style="color:var(--danger);"></i> Reorden (&le;5 días)</button>
                         <button type="button" class="chip-btn" data-invfilter="SOBRESTOCK"><i class="fa-solid fa-box-archive" style="color:var(--warning);"></i> Sobre-Stock (&gt;25 días)</button>
                         <button type="button" class="btn btn-primary btn-sm" id="btnExportInventoryExcel">
-                            <i class="fa-solid fa-file-excel"></i> Exportar Inventario y ABC (.xlsx)
+                            <i class="fa-solid fa-file-excel"></i> Exportar Inventario (.xlsx)
                         </button>
                     </div>
                 </div>
@@ -458,148 +427,16 @@
                                 <th class="num-col">Bodega 401</th>
                                 <th class="num-col">Ruta 402</th>
                                 <th class="num-col">Stock Total</th>
-                                <th class="num-col">Venta Mensual (Und)</th>
-                                <th class="num-col">Venta Mensual (₡)</th>
+                                <th class="num-col">Venta Mensual</th>
+                                <th class="num-col">Ingreso Mensual</th>
                                 <th class="num-col">Días Cobertura</th>
                                 <th class="num-col">Punto Reorden</th>
-                                <th>Estado de Abastecimiento</th>
+                                <th>Abastecimiento</th>
                             </tr>
                         </thead>
                         <tbody id="inventoryAbcTableBody"></tbody>
                     </table>
                 </div>
-            </div>
-        </section>
-
-        <!-- ============================================================== -->
-        <!-- MÓDULO 4: QUERY BUILDER COMERCIAL VISUAL & EXCEL AVANZADO       -->
-        <!-- ============================================================== -->
-        <section id="panel-query-builder" class="tab-panel" role="tabpanel">
-            <div class="section-card">
-                <div class="section-header">
-                    <div>
-                        <div class="section-title">
-                            <i class="fa-solid fa-terminal"></i>
-                            <span>Query Builder Comercial Interactivo & Exportador Dinámico a Excel Avanzado</span>
-                        </div>
-                        <p class="section-desc">
-                            Cruza tablas de Ventas, Costos, Inventarios, Listas de Precios y Competencia mediante filtros multi-condición, agrupamientos (GROUP BY) y generación SQL en tiempo real.
-                        </p>
-                    </div>
-                    <div class="filter-group">
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnCopyGeneratedSql">
-                            <i class="fa-solid fa-copy"></i> Copiar SQL
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnExportQueryExcel">
-                            <i class="fa-solid fa-file-excel"></i> Exportar Resultado a Excel (.xlsx)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 5 Consultas Estratégicas Preconfiguradas (1-Click Presets para Entrevista) -->
-                <div style="margin-bottom:14px;">
-                    <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:7px;">
-                        <i class="fa-solid fa-bolt" style="color:var(--brand-lime);"></i> Consultas Ejecutivas Preconfiguradas (1 Clic):
-                    </div>
-                    <div class="filter-group" id="qbPresetButtons">
-                        <button type="button" class="chip-btn active" data-preset="criticos_abc_a">
-                            1. SKUs Clase A con Margen &lt; 22%
-                        </button>
-                        <button type="button" class="chip-btn" data-preset="quiebre_stock">
-                            2. Riesgo de Quiebre de Stock (Cobertura &le; 6 días)
-                        </button>
-                        <button type="button" class="chip-btn" data-preset="brecha_supermercados">
-                            3. Comparativo vs Supermercados (AutoMercado / Walmart)
-                        </button>
-                        <button type="button" class="chip-btn" data-preset="alza_costos">
-                            4. Auditoría Alza de Costo Reposición (&ge; 5%)
-                        </button>
-                        <button type="button" class="chip-btn" data-preset="group_by_categoria">
-                            5. Resumen Agrupado (GROUP BY Categoría)
-                        </button>
-                        <button type="button" class="chip-btn" data-preset="catalogo_completo">
-                            6. Ver Base Completa (211 SKUs)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Constructor Visual de Consultas (SELECT / WHERE / GROUP BY / ORDER BY) -->
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:10px; background:var(--bg-elevated); padding:14px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">1. Fuente / Vista (FROM)</label>
-                        <select id="qbDatasetSelect" class="select-control" style="width:100%;">
-                            <option value="MASTER_JOIN">JOIN Maestro: Pricing + Ventas + Stock + ABC (211)</option>
-                            <option value="CENADA_VIEW">Benchmark Mayorista PIMA CENADA (39)</option>
-                            <option value="OC_PIPELINE">Pipeline de Órdenes de Compra (OC)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">2. Campo a Filtrar (WHERE)</label>
-                        <select id="qbFilterField" class="select-control" style="width:100%;">
-                            <option value="ALL">Sin filtro adicional (Todos)</option>
-                            <option value="margenReposicionPct">Margen Bruto (%)</option>
-                            <option value="varCostoPct">Variación de Costo (%)</option>
-                            <option value="diasCobertura">Días de Cobertura (Stock)</option>
-                            <option value="ventasMensualesCrc">Ventas Mensuales (₡)</option>
-                            <option value="abcClass">Clasificación ABC</option>
-                            <option value="categoria">Categoría de Producto</option>
-                            <option value="precioCompetenciaMin">Precio Mín. Supermercados (₡)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">3. Operador Lógico</label>
-                        <select id="qbFilterOperator" class="select-control" style="width:100%;">
-                            <option value="<">&lt; Menor que</option>
-                            <option value="<=">&le; Menor o igual que</option>
-                            <option value=">">&gt; Mayor que</option>
-                            <option value=">=">&ge; Mayor o igual que</option>
-                            <option value="=">= Igual a</option>
-                            <option value="CONTAINS">Contiene texto</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">4. Valor de Condición</label>
-                        <input type="text" id="qbFilterValue" class="input-control" style="width:100%;" value="22" placeholder="Ej: 20, A, Frutas...">
-                    </div>
-
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">5. Agrupar Por (GROUP BY)</label>
-                        <select id="qbGroupBySelect" class="select-control" style="width:100%;">
-                            <option value="NONE">Sin Agrupar (Detalle por SKU)</option>
-                            <option value="categoria">Agrupar por Categoría</option>
-                            <option value="abcClass">Agrupar por Clasificación ABC</option>
-                            <option value="estadoPrecio">Agrupar por Diagnóstico de Precio</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">6. Ordenar Por (ORDER BY)</label>
-                        <select id="qbOrderBySelect" class="select-control" style="width:100%;">
-                            <option value="ventasMensualesCrc_DESC">Ventas Mensuales (Mayor a Menor)</option>
-                            <option value="margenReposicionPct_ASC">Margen Bruto % (Menor a Mayor)</option>
-                            <option value="varCostoPct_DESC">Alza de Costo % (Mayor a Menor)</option>
-                            <option value="diasCobertura_ASC">Días de Cobertura (Menor a Mayor)</option>
-                            <option value="utilidadMensualCrc_DESC">Utilidad Bruta ₡ (Mayor a Menor)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Sentencia SQL Generada en Vivo -->
-                <div class="sql-preview-box" id="qbSqlPreview"></div>
-
-                <!-- Tabla Dinámica de Resultados del Query Builder -->
-                <div class="table-scroll">
-                    <table class="data-table" id="qbResultsTable">
-                        <thead id="qbResultsThead"></thead>
-                        <tbody id="qbResultsTbody"></tbody>
-                    </table>
-                </div>
-
-                <!-- Barra de Estado estilo Excel Avanzado (Suma, Promedio, Recuento, Mín, Máx) -->
-                <div class="excel-status-bar" id="qbExcelStatsBar"></div>
             </div>
         </section>
 
