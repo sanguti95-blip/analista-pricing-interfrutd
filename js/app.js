@@ -1318,7 +1318,7 @@ function setupEvents() {
         btnSwitchMatrix.addEventListener('click', () => {
             if (appState.pricingView === 'catalog') {
                 appState.pricingView = 'cenada';
-                btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-table-list"></i> Volver a Matriz Maestra (320 SKUs)`;
+                btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-table-list"></i> Volver a Matriz Maestra (${appState.catalog.length} SKUs)`;
             } else {
                 appState.pricingView = 'catalog';
                 btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-warehouse"></i> Ver Comparativo Cajas PIMA CENADA (39)`;

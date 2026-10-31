@@ -11,7 +11,7 @@ Proyecto demostrativo de alto impacto diseñado para el puesto de **Analista Com
 ## 🎯 Módulos Incluidos (Alineados 100% a las Responsabilidades de la Vacante)
 
 ### 1. 🏷️ Motor de Pricing, Costos y Listas de Precios (`Pricing, Costos & Listas`)
-- **320 SKUs reales** del catálogo hortofrutícola y de valor agregado (Frutas, Vegetales, Frutas Importadas, Valor Agregado, Especias y Granos).
+- **211 SKUs reales** del catálogo 100% fresco agrícola de frutas y verduras (Frutas Nacionales, Frutas Importadas y Vegetales).
 - **Gestión de 4 Listas de Precios Corporativas**:
   - Lista Mayorista / CEDI (Margen base ~18%)
   - Lista Supermercados / Cadenas (Margen base ~24%)
