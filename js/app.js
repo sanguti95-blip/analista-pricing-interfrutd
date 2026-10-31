@@ -682,6 +682,78 @@ function renderOcStepper(status) {
     `;
 }
 
+function openOcDetailModal(oc) {
+    const modal = document.getElementById('ocDetailModal');
+    const title = document.getElementById('ocDetailModalTitle');
+    const cont = document.getElementById('ocDetailModalContent');
+    if (!modal || !cont) return;
+
+    const totalPed = oc.lineas.reduce((s, l) => s + l.cantPedida, 0);
+    const totalDesp = oc.lineas.reduce((s, l) => s + l.cantDespachada, 0);
+    const totalMonto = oc.lineas.reduce((s, l) => s + (l.cantDespachada * l.precioUnit), 0);
+    const totalCosto = oc.lineas.reduce((s, l) => s + (l.cantDespachada * l.costoUnit), 0);
+    const totalMargen = totalMonto > 0 ? ((totalMonto - totalCosto) / totalMonto) * 100 : 0;
+    const overallFill = totalPed > 0 ? (totalDesp / totalPed) * 100 : 100;
+    const isSuper = oc.segmento.toLowerCase().includes('supermercado');
+    const slaTarget = isSuper ? 98 : 95;
+    const cumpleSla = overallFill >= slaTarget;
+
+    if (title) title.textContent = `Auditoría OTIF — Orden ${oc.ocNumero} (${oc.clienteNombre})`;
+    cont.innerHTML = `
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-elevated); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:16px; border:1px solid var(--border-color);">
+            <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">Segmento / Canal</span><div style="font-weight:700;">${escapeHtml(oc.segmento)} · ${escapeHtml(oc.canal)}</div></div>
+            <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">Entrega Compromiso</span><div style="font-weight:700;">${escapeHtml(oc.fechaEntregaCompromiso)}</div></div>
+            <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">Fill Rate / SLA (${slaTarget}%)</span><div style="font-weight:800; font-size:15px; color:${cumpleSla ? 'var(--brand-lime)' : 'var(--danger)'};">${formatPct(overallFill, 1)} ${cumpleSla ? '✅' : '⚠️'}</div></div>
+            <div><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">Facturación Efectiva</span><div style="font-weight:800; font-size:15px; color:var(--text-main);">${formatCRC(totalMonto)} (Margen: ${formatPct(totalMargen, 1)})</div></div>
+        </div>
+        <div class="table-scroll">
+            <table class="data-table" style="font-size:12px;">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Producto Solicitado</th>
+                        <th class="num-col">Pedida</th>
+                        <th class="num-col">Despachada</th>
+                        <th class="num-col">Cumplimiento %</th>
+                        <th class="num-col">Precio Unit (₡)</th>
+                        <th class="num-col">Subtotal Facturado</th>
+                        <th class="center-col">Auditoría de Despacho</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${oc.lineas.map(l => {
+                        const lFill = l.cantPedida > 0 ? (l.cantDespachada / l.cantPedida) * 100 : 100;
+                        const isFull = l.cantDespachada >= l.cantPedida;
+                        const diff = l.cantPedida - l.cantDespachada;
+                        return `
+                            <tr>
+                                <td><code style="font-weight:700; color:var(--brand-green);">${escapeHtml(l.sku)}</code></td>
+                                <td style="font-weight:700;">${escapeHtml(l.name)}</td>
+                                <td class="num-col">${formatNum(l.cantPedida)}</td>
+                                <td class="num-col" style="font-weight:700;">${formatNum(l.cantDespachada)}</td>
+                                <td class="num-col">
+                                    <span class="badge ${lFill >= 98 ? 'badge-success' : (lFill >= 90 ? 'badge-warning' : 'badge-danger')}">
+                                        ${formatPct(lFill, 1)}
+                                    </span>
+                                </td>
+                                <td class="num-col">${formatCRC(l.precioUnit)}</td>
+                                <td class="num-col" style="font-weight:700;">${formatCRC(l.cantDespachada * l.precioUnit)}</td>
+                                <td class="center-col">
+                                    ${isFull
+                                        ? '<span class="badge badge-success"><i class="fa-solid fa-check-double"></i> 100% Despachado</span>'
+                                        : `<span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> Faltante: ${formatNum(diff)} und</span>`
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    modal.classList.add('open');
+}
+
 function renderOrdersAndInventoryModule() {
     const baseCatalog = getFilteredCatalog();
 
@@ -691,62 +763,153 @@ function renderOrdersAndInventoryModule() {
     const totalInvValue = baseCatalog.reduce((s, x) => s + (x.stockTotal * x.costoActual), 0);
     const lowCoverageCount = baseCatalog.filter(x => x.diasCobertura <= 5).length;
 
-    // Cálculos de Órdenes de Compra (Fill Rate)
+    // Segmentos y SLAs para el Monitor OTIF (Operación Contra Pedido)
+    const channelSegments = [
+        { key: 'Supermercados', label: 'Cadenas Supermercados', icon: 'fa-store', sla: 98, hint: 'AutoMercado / Walmart' },
+        { key: 'HORECA Premium', label: 'HORECA Food Service', icon: 'fa-hotel', sla: 95, hint: 'Hoteles / Restaurantes' },
+        { key: 'Cadenas de Restaurantes', label: 'Cadenas Gastronómicas', icon: 'fa-utensils', sla: 95, hint: 'Rostipollos & Casual' },
+        { key: 'Institucional / Catering', label: 'Comedores / Catering', icon: 'fa-building-user', sla: 95, hint: 'Sodexo Zona Franca' },
+        { key: 'Mayorista / Ruteo', label: 'Mayoristas / CEDI', icon: 'fa-truck-moving', sla: 90, hint: 'CENADA / Ruteo' }
+    ];
+
+    const segStats = {};
+    channelSegments.forEach(c => {
+        segStats[c.key] = { pedidas: 0, despachadas: 0, facturado: 0, count: 0, sla: c.sla };
+    });
+
     let totalOrderedUnits = 0;
     let totalDispatchedUnits = 0;
-    let totalOcAmount = 0;
-    appState.purchaseOrders.forEach(oc => {
-        oc.lineas.forEach(l => {
-            totalOrderedUnits += l.cantPedida;
-            totalDispatchedUnits += l.cantDespachada;
-            totalOcAmount += l.cantDespachada * l.precioUnit;
-        });
-    });
-    const globalFillRatePct = totalOrderedUnits > 0 ? (totalDispatchedUnits / totalOrderedUnits) * 100 : 100;
+    let totalOcFacturado = 0;
+    let totalOcPedidoPotencial = 0;
+    let ocs100Count = 0;
 
+    appState.purchaseOrders.forEach(oc => {
+        let ocPed = 0;
+        let ocDesp = 0;
+        let ocFact = 0;
+        let ocPot = 0;
+
+        oc.lineas.forEach(l => {
+            ocPed += l.cantPedida;
+            ocDesp += l.cantDespachada;
+            ocFact += l.cantDespachada * l.precioUnit;
+            ocPot += l.cantPedida * l.precioUnit;
+        });
+
+        totalOrderedUnits += ocPed;
+        totalDispatchedUnits += ocDesp;
+        totalOcFacturado += ocFact;
+        totalOcPedidoPotencial += ocPot;
+        if (ocDesp >= ocPed && ocPed > 0) ocs100Count++;
+
+        const sKey = segStats[oc.segmento] ? oc.segmento : 'Mayorista / Ruteo';
+        segStats[sKey].pedidas += ocPed;
+        segStats[sKey].despachadas += ocDesp;
+        segStats[sKey].facturado += ocFact;
+        segStats[sKey].count += 1;
+    });
+
+    const globalFillRatePct = totalOrderedUnits > 0 ? (totalDispatchedUnits / totalOrderedUnits) * 100 : 100;
+    const lostSalesCrc = Math.max(0, totalOcPedidoPotencial - totalOcFacturado);
+
+    // 1. Grid Principal de KPIs
     const kpiGrid = document.getElementById('ordersKpiGrid');
     if (kpiGrid) {
         kpiGrid.innerHTML = `
             <div class="kpi-card">
-                <div class="kpi-header"><span>Ventas Mensuales Proyectadas</span><i class="fa-solid fa-chart-line"></i></div>
-                <div class="kpi-value">${formatCRC(totalMonthlySales)}</div>
+                <div class="kpi-header"><span>Facturación en OCs Contra Pedido</span><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                <div class="kpi-value">${formatCRC(totalOcFacturado)}</div>
                 <div class="kpi-sub">
-                    <span>Utilidad Bruta: <strong>${formatCRC(totalMonthlyUtil)}</strong></span>
+                    <span class="badge badge-success">${appState.purchaseOrders.length} OCs Activas</span>
+                    <span>Proyección Mes: <strong>${formatCRC(totalMonthlySales)}</strong></span>
+                </div>
+            </div>
+            <div class="kpi-card ${globalFillRatePct >= 96 ? '' : 'kpi-warning'}">
+                <div class="kpi-header"><span>Nivel de Servicio Global (Fill Rate OTIF)</span><i class="fa-solid fa-truck-fast"></i></div>
+                <div class="kpi-value">${formatPct(globalFillRatePct, 1)}</div>
+                <div class="kpi-sub">
+                    <span class="badge badge-success">${ocs100Count} de ${appState.purchaseOrders.length} al 100%</span>
+                    <span>${formatNum(totalDispatchedUnits)} de ${formatNum(totalOrderedUnits)} und</span>
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-header"><span>Valorización de Inventario</span><i class="fa-solid fa-warehouse"></i></div>
-                <div class="kpi-value">${formatCRC(totalInvValue)}</div>
+                <div class="kpi-header"><span>SLA Cadenas Supermercados</span><i class="fa-solid fa-store"></i></div>
+                <div class="kpi-value">${formatPct(segStats['Supermercados']?.pedidas > 0 ? (segStats['Supermercados'].despachadas / segStats['Supermercados'].pedidas) * 100 : 100, 1)}</div>
                 <div class="kpi-sub">
-                    <span>CEDI 400 + Bodega 401 + Ruta 402</span>
+                    <span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Meta &ge;98.0% Superada</span>
+                    <span>Sin penalizaciones</span>
                 </div>
             </div>
-            <div class="kpi-card ${globalFillRatePct < 95 ? 'kpi-warning' : ''}">
-                <div class="kpi-header"><span>Nivel de Servicio (Fill Rate OC)</span><i class="fa-solid fa-truck-fast"></i></div>
-                <div class="kpi-value">${formatPct(globalFillRatePct, 1)}</div>
+            <div class="kpi-card ${lostSalesCrc > 0 ? 'kpi-warning' : ''}">
+                <div class="kpi-header"><span>Venta No Realizada por Quiebre</span><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="kpi-value">${formatCRC(lostSalesCrc)}</div>
                 <div class="kpi-sub">
-                    <span>${appState.purchaseOrders.length} OCs activas · Facturado: ${formatCRC(totalOcAmount)}</span>
+                    <span>${formatPct(totalOcPedidoPotencial > 0 ? (lostSalesCrc / totalOcPedidoPotencial) * 100 : 0, 1)} de merma comercial</span>
+                    <span>${formatNum(totalOrderedUnits - totalDispatchedUnits)} und faltantes</span>
                 </div>
             </div>
-            <div class="kpi-card ${lowCoverageCount > 0 ? 'kpi-danger' : ''}">
-                <div class="kpi-header"><span>Alertas de Abastecimiento</span><i class="fa-solid fa-bell"></i></div>
-                <div class="kpi-value">${lowCoverageCount} <span style="font-size:14px; color:var(--text-muted);">SKUs &le;5 días</span></div>
-                <div class="kpi-sub">
-                    <span>Requieren reposición inmediata a CEDI</span>
+        `;
+    }
+
+    // 2. Renderizar Monitor OTIF por Canal
+    const otifGridEl = document.getElementById('otifChannelGrid');
+    if (otifGridEl) {
+        otifGridEl.innerHTML = channelSegments.map(c => {
+            const stat = segStats[c.key] || { pedidas: 0, despachadas: 0, facturado: 0, count: 0, sla: c.sla };
+            const rate = stat.pedidas > 0 ? (stat.despachadas / stat.pedidas) * 100 : 100;
+            const meets = rate >= c.sla;
+            const barColor = meets ? 'var(--brand-green-light)' : 'var(--danger)';
+
+            return `
+                <div class="otif-card">
+                    <div class="otif-card-top">
+                        <span class="otif-card-name"><i class="fa-solid ${c.icon}"></i> ${c.label}</span>
+                        <span class="otif-card-sla">SLA &ge;${c.sla}%</span>
+                    </div>
+                    <div class="otif-card-metric">
+                        <div class="otif-val" style="color:${meets ? 'var(--text-main)' : 'var(--danger)'};">${formatPct(rate, 1)}</div>
+                        <span class="badge ${meets ? 'badge-success' : 'badge-danger'}">
+                            ${meets ? '<i class="fa-solid fa-check"></i> Cumple SLA' : '<i class="fa-solid fa-triangle-exclamation"></i> En Riesgo'}
+                        </span>
+                    </div>
+                    <div class="otif-progress-wrap">
+                        <div class="otif-progress-bar" style="width:${Math.min(100, rate)}%; background:${barColor};"></div>
+                    </div>
+                    <div class="otif-card-footer">
+                        <span>${c.hint}</span>
+                        <span>${stat.count} OC(s) · ${formatCRC(stat.facturado)}</span>
+                    </div>
                 </div>
-            </div>
+            `;
+        }).join('');
+    }
+
+    // 3. Renderizar Franja Financiera OTIF
+    const otifStripEl = document.getElementById('otifFinancialStrip');
+    if (otifStripEl) {
+        otifStripEl.innerHTML = `
+            <div class="otif-pill"><i class="fa-solid fa-clipboard-check" style="color:var(--brand-green-light);"></i> Demanda Solicitada: <strong>${formatNum(totalOrderedUnits)} und / cajas</strong></div>
+            <div class="otif-pill"><i class="fa-solid fa-truck-ramp-box" style="color:var(--brand-lime);"></i> Despachado en Andén: <strong>${formatNum(totalDispatchedUnits)} und / cajas</strong></div>
+            <div class="otif-pill"><i class="fa-solid fa-sack-dollar" style="color:var(--brand-green-light);"></i> Facturación Efectiva: <strong>${formatCRC(totalOcFacturado)}</strong></div>
+            <div class="otif-pill"><i class="fa-solid fa-scale-unbalanced" style="color:var(--warning);"></i> Brecha No Facturada: <strong>${formatCRC(lostSalesCrc)}</strong></div>
+            <div class="otif-pill"><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Modelo Contra Pedido 100% Activo</span></div>
         `;
     }
 
     const badgeOC = document.getElementById('badgeCountOC');
     if (badgeOC) badgeOC.textContent = String(appState.purchaseOrders.length);
 
-    // Tabla de Seguimiento de Órdenes de Compra (OC)
+    // 4. Tabla de Seguimiento de Órdenes de Compra (OC)
     const ocTbody = document.getElementById('purchaseOrdersTableBody');
     if (ocTbody) {
-        const filteredOCs = appState.purchaseOrders.filter(oc =>
-            appState.ocFilterStatus === 'ALL' ? true : oc.estado === appState.ocFilterStatus
-        );
+        const filteredOCs = appState.purchaseOrders.filter(oc => {
+            const ped = oc.lineas.reduce((s, l) => s + l.cantPedida, 0);
+            const desp = oc.lineas.reduce((s, l) => s + l.cantDespachada, 0);
+            if (appState.ocFilterStatus === '100_OTIF') return desp >= ped;
+            if (appState.ocFilterStatus === 'PARCIAL') return desp < ped;
+            if (appState.ocFilterStatus !== 'ALL') return oc.estado === appState.ocFilterStatus;
+            return true;
+        });
 
         ocTbody.innerHTML = filteredOCs.map(oc => {
             const pedida = oc.lineas.reduce((s, l) => s + l.cantPedida, 0);
@@ -756,11 +919,13 @@ function renderOrdersAndInventoryModule() {
             const margenOc = monto > 0 ? ((monto - costo) / monto) * 100 : 0;
             const fillRate = pedida > 0 ? (desp / pedida) * 100 : 100;
 
-            let stateBadge = `<span class="badge badge-info">${escapeHtml(oc.estado)}</span>`;
-            if (oc.estado === 'ENTREGADA') stateBadge = `<span class="badge badge-success"><i class="fa-solid fa-check-double"></i> ENTREGADA & FACTURADA</span>`;
-            else if (oc.estado === 'EN_RUTA') stateBadge = `<span class="badge badge-info"><i class="fa-solid fa-truck-fast"></i> EN RUTA DESPACHO</span>`;
-            else if (oc.estado === 'ALERTA_STOCK') stateBadge = `<span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> ALERTA STOCK PARCIAL</span>`;
-            else if (oc.estado === 'EN_ALISTAMIENTO') stateBadge = `<span class="badge badge-warning"><i class="fa-solid fa-boxes-packing"></i> EN ALISTAMIENTO BODEGA</span>`;
+            const isSuper = oc.segmento.toLowerCase().includes('supermercado');
+            const slaMeta = isSuper ? 98 : 95;
+            const cumpleSla = fillRate >= slaMeta;
+
+            const slaBadge = cumpleSla
+                ? `<span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Cumple (&ge;${slaMeta}%)</span>`
+                : `<span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> Riesgo (&lt;${slaMeta}%)</span>`;
 
             return `
                 <tr>
@@ -775,16 +940,20 @@ function renderOrdersAndInventoryModule() {
                     <td class="num-col">${formatNum(pedida)}</td>
                     <td class="num-col" style="font-weight:700;">${formatNum(desp)}</td>
                     <td class="num-col">
-                        <span class="badge ${fillRate >= 98 ? 'badge-success' : (fillRate >= 90 ? 'badge-warning' : 'badge-danger')}">
+                        <span class="badge ${fillRate >= 98 ? 'badge-success' : (fillRate >= 95 ? 'badge-info' : 'badge-warning')}">
                             ${formatPct(fillRate, 1)}
                         </span>
                     </td>
+                    <td class="center-col">${slaBadge}</td>
                     <td class="num-col" style="font-weight:700;">${formatCRC(monto)}</td>
                     <td class="num-col">${formatPct(margenOc, 1)}</td>
                     <td>${renderOcStepper(oc.estado)}</td>
-                    <td class="center-col">
-                        <button type="button" class="btn btn-secondary btn-sm btn-advance-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Avanzar al siguiente estado del flujo comercial">
-                            <i class="fa-solid fa-forward-step"></i> Avanzar
+                    <td class="center-col" style="white-space:nowrap;">
+                        <button type="button" class="btn btn-secondary btn-sm btn-view-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Auditar líneas de la orden">
+                            <i class="fa-solid fa-list-check"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm btn-advance-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Avanzar estado del flujo comercial">
+                            <i class="fa-solid fa-forward-step"></i>
                         </button>
                     </td>
                 </tr>
@@ -1456,6 +1625,14 @@ function setupEvents() {
     const ocTbody = document.getElementById('purchaseOrdersTableBody');
     if (ocTbody) {
         ocTbody.addEventListener('click', (e) => {
+            const btnView = e.target.closest('.btn-view-oc');
+            if (btnView) {
+                const ocNum = btnView.getAttribute('data-oc');
+                const oc = appState.purchaseOrders.find(x => x.ocNumero === ocNum);
+                if (oc) openOcDetailModal(oc);
+                return;
+            }
+
             const btnAdv = e.target.closest('.btn-advance-oc');
             if (btnAdv) {
                 const ocNum = btnAdv.getAttribute('data-oc');
@@ -1470,6 +1647,15 @@ function setupEvents() {
                 renderOrdersAndInventoryModule();
                 showToast(`Orden ${oc.ocNumero} actualizada a estado: ${oc.estado}`, 'fa-truck-fast');
             }
+        });
+    }
+
+    const modalOc = document.getElementById('ocDetailModal');
+    const btnCloseOc = document.getElementById('btnCloseOcModal');
+    if (btnCloseOc && modalOc) {
+        btnCloseOc.addEventListener('click', () => modalOc.classList.remove('open'));
+        modalOc.addEventListener('click', (e) => {
+            if (e.target === modalOc) modalOc.classList.remove('open');
         });
     }
 

@@ -920,6 +920,155 @@ body {
     color: var(--brand-lime);
 }
 
+/* ==========================================================================
+   MONITOR DE NIVEL DE SERVICIO OTIF & FILL RATE (MODELO CONTRA PEDIDO)
+   ========================================================================== */
+.otif-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-card);
+}
+
+.otif-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.otif-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.otif-title i {
+    color: var(--brand-green-light);
+    font-size: 15px;
+}
+
+.otif-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.otif-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.otif-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    transition: all 0.18s ease;
+}
+
+.otif-card:hover {
+    border-color: var(--brand-green-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.otif-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.otif-card-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.otif-card-sla {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(148, 163, 184, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.otif-card-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+}
+
+.otif-val {
+    font-size: 22px;
+    font-weight: 800;
+    font-family: var(--font-heading);
+    color: var(--text-main);
+}
+
+.otif-progress-wrap {
+    height: 6px;
+    background: rgba(148, 163, 184, 0.18);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.otif-progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.otif-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.otif-financial-strip {
+    background: rgba(46, 139, 87, 0.08);
+    border: 1px solid rgba(77, 184, 72, 0.22);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.otif-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.otif-pill strong {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
 @media print {
     .top-header,
     .nav-bar,

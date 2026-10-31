@@ -396,6 +396,19 @@
         <section id="panel-ordenes" class="tab-panel" role="tabpanel">
             <div class="kpi-grid" id="ordersKpiGrid"></div>
 
+            <!-- Monitor de Nivel de Servicio OTIF & Fill Rate (Modelo Contra Pedido B2B) -->
+            <div class="otif-panel" id="otifServicePanel">
+                <div class="otif-header">
+                    <div class="otif-title">
+                        <i class="fa-solid fa-truck-ramp-box"></i>
+                        <span>Nivel de Servicio OTIF & Fill Rate (Modelo Contra Pedido B2B)</span>
+                    </div>
+                    <span class="otif-hint">Auditoría de cumplimiento de SLA para Cadenas de Supermercados (≥98%) y HORECA (≥95%) sin inventario ocioso</span>
+                </div>
+                <div class="otif-grid" id="otifChannelGrid"></div>
+                <div class="otif-financial-strip" id="otifFinancialStrip"></div>
+            </div>
+
             <!-- Gráficos de Ventas, Margen por Categoría y Pareto ABC -->
             <div class="charts-grid-2">
                 <div class="section-card" style="margin-bottom:0;">
@@ -432,11 +445,12 @@
                     </div>
                     <div class="filter-group" id="ocStatusFilterGroup">
                         <button type="button" class="chip-btn active" data-ocfilter="ALL">Todas</button>
+                        <button type="button" class="chip-btn" data-ocfilter="100_OTIF"><i class="fa-solid fa-check-double" style="color:var(--success);"></i> 100% OTIF</button>
+                        <button type="button" class="chip-btn" data-ocfilter="PARCIAL"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);"></i> Parcial (&lt;100%)</button>
                         <button type="button" class="chip-btn" data-ocfilter="OC_RECIBIDA">Recibida</button>
                         <button type="button" class="chip-btn" data-ocfilter="EN_ALISTAMIENTO">Alistamiento</button>
                         <button type="button" class="chip-btn" data-ocfilter="EN_RUTA">En Ruta</button>
                         <button type="button" class="chip-btn" data-ocfilter="ENTREGADA">Entregada</button>
-                        <button type="button" class="chip-btn" data-ocfilter="ALERTA_STOCK">Alerta Stock</button>
                     </div>
                 </div>
 
@@ -452,6 +466,7 @@
                                 <th class="num-col">Pedidas</th>
                                 <th class="num-col">Despachadas</th>
                                 <th class="num-col">Fill Rate</th>
+                                <th class="center-col">SLA Canal</th>
                                 <th class="num-col">Monto OC (₡)</th>
                                 <th class="num-col">Margen OC</th>
                                 <th>Flujo de Proceso</th>
@@ -524,6 +539,24 @@
                 </div>
             </div>
             <div id="quotePrintableContent"></div>
+        </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL AUDITORÍA DE LÍNEAS DE ORDEN DE COMPRA (OTIF)                -->
+    <!-- ================================================================== -->
+    <div class="modal-backdrop" id="ocDetailModal">
+        <div class="modal-box" style="max-width:820px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-clipboard-list" style="color:var(--brand-green-light); font-size:18px;"></i>
+                    <h3 style="font-size:16px; font-weight:700;" id="ocDetailModalTitle">Auditoría de Fill Rate por Línea</h3>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnCloseOcModal">
+                    <i class="fa-solid fa-xmark"></i> Cerrar
+                </button>
+            </div>
+            <div id="ocDetailModalContent"></div>
         </div>
     </div>
 
