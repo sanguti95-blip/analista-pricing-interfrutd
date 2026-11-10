@@ -264,7 +264,12 @@
                     <!-- Datos de Cabecera del Cliente -->
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:12px;">
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Cliente Corporativo</label>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <label style="font-size:11px; font-weight:700; color:var(--text-muted);">Cliente Corporativo</label>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnQuickNewClientFromQuote" style="padding:1px 6px; font-size:10.5px; height:20px;" title="Registrar nuevo cliente">
+                                    <i class="fa-solid fa-user-plus"></i> + Nuevo
+                                </button>
+                            </div>
                             <select id="quoteClientSelect" class="select-control" style="width:100%;"></select>
                         </div>
                         <div>
@@ -374,7 +379,12 @@
                         <i class="fa-solid fa-users-gear"></i>
                         <span id="clientScheduleHeaderTitle">Programación de Clientes B2B, Días de Entrega y Rutas</span>
                     </div>
-                    <span class="badge badge-success">Recepción Contra Pedido en Andén</span>
+                    <div class="filter-group">
+                        <span class="badge badge-success">Recepción Contra Pedido en Andén</span>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnOpenNewClientModal" title="Registrar un nuevo cliente corporativo">
+                            <i class="fa-solid fa-user-plus"></i> + Nuevo Cliente B2B
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-scroll">
@@ -469,6 +479,125 @@
                 </button>
             </div>
             <div id="ocDetailModalContent"></div>
+        </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL REGISTRO / EDICIÓN DE CLIENTE CORPORATIVO B2B                -->
+    <!-- ================================================================== -->
+    <div class="modal-backdrop" id="clientFormModal">
+        <div class="modal-box" style="max-width:760px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-address-card" style="color:var(--brand-green-light); font-size:18px;"></i>
+                    <h3 style="font-size:16px; font-weight:700;" id="clientModalTitle">Ficha de Cliente Corporativo B2B</h3>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnCloseClientModal">
+                    <i class="fa-solid fa-xmark"></i> Cerrar
+                </button>
+            </div>
+
+            <form id="clientModalForm" onsubmit="return false;">
+                <input type="hidden" id="clientFormId" value="">
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:14px;">
+                    <div style="grid-column: 1 / -1;">
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Razón Social / Nombre Comercial *</label>
+                        <input type="text" id="clientFormName" class="input-control" style="width:100%; font-weight:700;" placeholder="Ej. Hoteles Real InterContinental" required>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Segmento Comercial</label>
+                        <select id="clientFormSegment" class="select-control" style="width:100%;">
+                            <option value="Supermercados">Supermercados / Cadenas</option>
+                            <option value="HORECA Premium" selected>HORECA Premium</option>
+                            <option value="Cadenas de Restaurantes">Cadenas Gastronómicas</option>
+                            <option value="Institucional / Catering">Institucional / Catering</option>
+                            <option value="Mayorista / Ruteo">Mayorista / Ruteo</option>
+                            <option value="Retail / Punto de Venta">Retail / Punto de Venta Propio</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Lista de Precios Base</label>
+                        <select id="clientFormList" class="select-control" style="width:100%;">
+                            <option value="HORECA" selected>Lista HORECA / Food Service</option>
+                            <option value="SUPERMERCADO">Lista Supermercados</option>
+                            <option value="MAYORISTA">Lista Mayorista / CEDI</option>
+                            <option value="DETALLE">Lista Detalle / Base</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Contacto / Compras</label>
+                        <input type="text" id="clientFormContact" class="input-control" style="width:100%;" placeholder="Ej. Lic. Laura Mora">
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Correo Electrónico</label>
+                        <input type="email" id="clientFormEmail" class="input-control" style="width:100%;" placeholder="compras@cliente.com">
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Teléfono</label>
+                        <input type="text" id="clientFormPhone" class="input-control" style="width:100%;" placeholder="Ej. 2289-0000">
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Crédito Comercial (Días)</label>
+                        <input type="number" id="clientFormCreditDays" class="input-control" style="width:100%;" min="0" max="90" value="15">
+                    </div>
+                </div>
+
+                <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:16px;">
+                    <div style="font-size:12px; font-weight:700; color:var(--brand-lime); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-truck-ramp-box"></i> Parámetros Logísticos & Días de Entrega Contra Pedido
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Ruta Logística Asignada</label>
+                            <input type="text" id="clientFormRoute" class="input-control" style="width:100%;" value="Ruta GAM Central (402)" placeholder="Ej. Ruta GAM Central (402)">
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Ventana de Recibo en Andén</label>
+                            <input type="text" id="clientFormDockWindow" class="input-control" style="width:100%;" value="05:30 AM – 07:00 AM" placeholder="Ej. 05:00 AM – 06:30 AM">
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Hora de Corte (Cut-off)</label>
+                            <input type="text" id="clientFormCutOff" class="input-control" style="width:100%;" value="Día ant. 03:00 PM" placeholder="Ej. Día ant. 03:00 PM">
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Meta Nivel de Servicio (SLA %)</label>
+                            <input type="number" id="clientFormSlaMeta" class="input-control" style="width:100%;" min="80" max="100" value="95">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">
+                            Días de Despacho Habituales (Haz clic para activar/desactivar):
+                        </label>
+                        <div class="day-pills-wrap" id="clientFormDayPills" style="justify-content:flex-start; gap:8px;">
+                            <button type="button" class="day-pill-btn active" data-formday="L" title="Lunes">L</button>
+                            <button type="button" class="day-pill-btn" data-formday="M" title="Martes">M</button>
+                            <button type="button" class="day-pill-btn active" data-formday="K" title="Miércoles">K</button>
+                            <button type="button" class="day-pill-btn" data-formday="J" title="Jueves">J</button>
+                            <button type="button" class="day-pill-btn active" data-formday="V" title="Viernes">V</button>
+                            <button type="button" class="day-pill-btn" data-formday="S" title="Sábado">S</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnCancelClientModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnSaveClientModal">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Ficha de Cliente
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

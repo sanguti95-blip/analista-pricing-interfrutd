@@ -130,14 +130,19 @@ function initStateData() {
         appState.quotes = structuredClone(INITIAL_QUOTES);
     }
 
-    // Restaurar programación personalizada de días por cliente B2B
+    // Restaurar clientes B2B (creados o editados) y su programación personalizada de días
     try {
-        const savedClientDays = localStorage.getItem('interfrutd_client_days');
-        const daysMap = savedClientDays ? JSON.parse(savedClientDays) : {};
-        appState.clients = B2B_CLIENTS.map(c => ({
-            ...c,
-            diasEntrega: Array.isArray(daysMap[c.id]) ? daysMap[c.id] : [...(c.diasEntrega || ['L', 'K', 'V'])]
-        }));
+        const savedClients = localStorage.getItem('interfrutd_clients_v3');
+        if (savedClients) {
+            appState.clients = JSON.parse(savedClients);
+        } else {
+            const savedClientDays = localStorage.getItem('interfrutd_client_days');
+            const daysMap = savedClientDays ? JSON.parse(savedClientDays) : {};
+            appState.clients = B2B_CLIENTS.map(c => ({
+                ...c,
+                diasEntrega: Array.isArray(daysMap[c.id]) ? daysMap[c.id] : [...(c.diasEntrega || ['L', 'K', 'V'])]
+            }));
+        }
     } catch (e) {
         appState.clients = structuredClone(B2B_CLIENTS);
     }
@@ -406,10 +411,14 @@ function renderCenadaComparisonTable() {
 // ============================================================================
 function populateQuoteSelectors() {
     const clientSel = document.getElementById('quoteClientSelect');
-    if (clientSel && clientSel.options.length === 0) {
+    if (clientSel) {
+        const curVal = clientSel.value || appState.activeQuoteDraft?.clienteId;
         clientSel.innerHTML = appState.clients.map(c =>
             `<option value="${escapeHtml(c.id)}">${escapeHtml(c.nombre)} (${escapeHtml(c.segmento)})</option>`
         ).join('');
+        if (curVal && appState.clients.some(c => c.id === curVal)) {
+            clientSel.value = curVal;
+        }
     }
 
     const skuSel = document.getElementById('quoteAddSkuSelect');
@@ -789,6 +798,165 @@ function openOcDetailModal(oc) {
     modal.classList.add('open');
 }
 
+function openClientModal(clientId = null) {
+    const modal = document.getElementById('clientFormModal');
+    const title = document.getElementById('clientModalTitle');
+    const formId = document.getElementById('clientFormId');
+    const nameIn = document.getElementById('clientFormName');
+    const segIn = document.getElementById('clientFormSegment');
+    const listIn = document.getElementById('clientFormList');
+    const contactIn = document.getElementById('clientFormContact');
+    const emailIn = document.getElementById('clientFormEmail');
+    const phoneIn = document.getElementById('clientFormPhone');
+    const creditIn = document.getElementById('clientFormCreditDays');
+    const routeIn = document.getElementById('clientFormRoute');
+    const dockIn = document.getElementById('clientFormDockWindow');
+    const cutOffIn = document.getElementById('clientFormCutOff');
+    const slaIn = document.getElementById('clientFormSlaMeta');
+    const dayPills = document.querySelectorAll('#clientFormDayPills .day-pill-btn');
+
+    if (!modal) return;
+
+    if (clientId) {
+        const cli = appState.clients.find(c => c.id === clientId);
+        if (!cli) return;
+        if (title) title.innerHTML = `<i class="fa-solid fa-pen-to-square" style="color:var(--brand-green-light); margin-right:6px;"></i>Editar Ficha — ${escapeHtml(cli.nombre)} (${cli.id})`;
+        if (formId) formId.value = cli.id;
+        if (nameIn) nameIn.value = cli.nombre || '';
+        if (segIn) segIn.value = cli.segmento || 'HORECA Premium';
+        if (listIn) listIn.value = cli.listaAsignada || 'HORECA';
+        if (contactIn) contactIn.value = cli.contacto || '';
+        if (emailIn) emailIn.value = cli.email || '';
+        if (phoneIn) phoneIn.value = cli.telefono || '';
+        if (creditIn) creditIn.value = cli.diasCredito !== undefined ? cli.diasCredito : 15;
+        if (routeIn) routeIn.value = cli.ruta || 'Ruta GAM Central (402)';
+        if (dockIn) dockIn.value = cli.ventanaAnden || '05:30 AM – 07:00 AM';
+        if (cutOffIn) cutOffIn.value = cli.horaCorte || 'Día ant. 03:00 PM';
+        if (slaIn) slaIn.value = cli.slaMeta !== undefined ? cli.slaMeta : 95;
+
+        const activeDays = cli.diasEntrega || ['L', 'K', 'V'];
+        dayPills.forEach(btn => {
+            const d = btn.getAttribute('data-formday');
+            btn.classList.toggle('active', activeDays.includes(d));
+        });
+    } else {
+        if (title) title.innerHTML = `<i class="fa-solid fa-user-plus" style="color:var(--brand-green-light); margin-right:6px;"></i>Registrar Nuevo Cliente Corporativo B2B`;
+        if (formId) formId.value = '';
+        if (nameIn) nameIn.value = '';
+        if (segIn) segIn.value = 'HORECA Premium';
+        if (listIn) listIn.value = 'HORECA';
+        if (contactIn) contactIn.value = '';
+        if (emailIn) emailIn.value = '';
+        if (phoneIn) phoneIn.value = '';
+        if (creditIn) creditIn.value = 15;
+        if (routeIn) routeIn.value = 'Ruta GAM Central (402)';
+        if (dockIn) dockIn.value = '05:30 AM – 07:00 AM';
+        if (cutOffIn) cutOffIn.value = 'Día ant. 03:00 PM';
+        if (slaIn) slaIn.value = 95;
+
+        const defaultDays = ['L', 'K', 'V'];
+        dayPills.forEach(btn => {
+            const d = btn.getAttribute('data-formday');
+            btn.classList.toggle('active', defaultDays.includes(d));
+        });
+    }
+
+    modal.classList.add('open');
+    setTimeout(() => nameIn?.focus(), 60);
+}
+
+function saveClientFormData() {
+    const formId = document.getElementById('clientFormId')?.value.trim();
+    const nameVal = document.getElementById('clientFormName')?.value.trim();
+    if (!nameVal) {
+        showToast('El nombre o razón social del cliente es obligatorio.', 'fa-triangle-exclamation');
+        document.getElementById('clientFormName')?.focus();
+        return;
+    }
+
+    const segVal = document.getElementById('clientFormSegment')?.value || 'HORECA Premium';
+    const listVal = document.getElementById('clientFormList')?.value || 'HORECA';
+    const contactVal = document.getElementById('clientFormContact')?.value.trim() || 'Compras Corporativas';
+    const emailVal = document.getElementById('clientFormEmail')?.value.trim() || 'compras@cliente.com';
+    const phoneVal = document.getElementById('clientFormPhone')?.value.trim() || '2200-0000';
+    const creditVal = Math.max(0, parseInt(document.getElementById('clientFormCreditDays')?.value, 10) || 0);
+    const routeVal = document.getElementById('clientFormRoute')?.value.trim() || 'Ruta GAM Central (402)';
+    const dockVal = document.getElementById('clientFormDockWindow')?.value.trim() || '05:30 AM – 07:00 AM';
+    const cutOffVal = document.getElementById('clientFormCutOff')?.value.trim() || 'Día ant. 03:00 PM';
+    const slaVal = Math.min(100, Math.max(80, parseInt(document.getElementById('clientFormSlaMeta')?.value, 10) || 95));
+
+    const selectedDays = [];
+    document.querySelectorAll('#clientFormDayPills .day-pill-btn.active').forEach(b => {
+        selectedDays.push(b.getAttribute('data-formday'));
+    });
+    if (selectedDays.length === 0) {
+        selectedDays.push('L');
+    }
+
+    if (formId) {
+        const cli = appState.clients.find(c => c.id === formId);
+        if (cli) {
+            cli.nombre = nameVal;
+            cli.segmento = segVal;
+            cli.listaAsignada = listVal;
+            cli.contacto = contactVal;
+            cli.email = emailVal;
+            cli.telefono = phoneVal;
+            cli.diasCredito = creditVal;
+            cli.ruta = routeVal;
+            cli.ventanaAnden = dockVal;
+            cli.horaCorte = cutOffVal;
+            cli.slaMeta = slaVal;
+            cli.diasEntrega = selectedDays;
+
+            const baseCli = B2B_CLIENTS.find(c => c.id === formId);
+            if (baseCli) Object.assign(baseCli, cli);
+
+            showToast(`Ficha de ${cli.nombre} actualizada exitosamente.`, 'fa-circle-check');
+        }
+    } else {
+        let maxNum = 0;
+        appState.clients.forEach(c => {
+            const m = String(c.id).match(/\d+/);
+            if (m) {
+                const n = parseInt(m[0], 10);
+                if (n > maxNum) maxNum = n;
+            }
+        });
+        const nextId = `CLI-00${maxNum + 1}`;
+        const newClient = {
+            id: nextId,
+            nombre: nameVal,
+            contacto: contactVal,
+            email: emailVal,
+            telefono: phoneVal,
+            segmento: segVal,
+            listaAsignada: listVal,
+            descuentoBasePct: 0,
+            diasCredito: creditVal,
+            ruta: routeVal,
+            ventanaAnden: dockVal,
+            horaCorte: cutOffVal,
+            slaMeta: slaVal,
+            diasEntrega: selectedDays
+        };
+        appState.clients.push(newClient);
+        showToast(`Nuevo cliente ${newClient.nombre} (${newClient.id}) creado en cartera.`, 'fa-user-check');
+    }
+
+    try {
+        localStorage.setItem('interfrutd_clients_v3', JSON.stringify(appState.clients));
+        const daysMap = {};
+        appState.clients.forEach(c => { daysMap[c.id] = c.diasEntrega; });
+        localStorage.setItem('interfrutd_client_days', JSON.stringify(daysMap));
+    } catch (e) {}
+
+    document.getElementById('clientFormModal')?.classList.remove('open');
+    populateQuoteSelectors();
+    renderOrdersAndInventoryModule();
+    if (appState.activeTab === 'cotizaciones') renderQuotesModule();
+}
+
 function renderOrdersAndInventoryModule() {
     const baseCatalog = getFilteredCatalog();
     const totalMonthlySales = baseCatalog.reduce((s, x) => s + x.ventasMensualesCrc, 0);
@@ -955,8 +1123,11 @@ function renderOrdersAndInventoryModule() {
                         <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">${cli.diasCredito} días</span>
                     </td>
                     <td class="center-col" style="white-space:nowrap;">
-                        <div style="display:inline-flex; align-items:center; gap:6px;">
+                        <div style="display:inline-flex; align-items:center; gap:5px;">
                             <span class="badge badge-success">SLA &ge;${cli.slaMeta || 95}%</span>
+                            <button type="button" class="btn btn-secondary btn-sm btn-edit-client" data-cli="${escapeHtml(cli.id)}" title="Editar Ficha de Cliente">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
                             <button type="button" class="btn btn-secondary btn-sm btn-schedule-quote" data-cli="${escapeHtml(cli.id)}" title="Crear Cotización / Orden para este cliente">
                                 <i class="fa-solid fa-file-circle-plus"></i> Cotizar
                             </button>
@@ -1607,7 +1778,7 @@ function setupEvents() {
                 if (!quote) return;
 
                 quote.estado = 'CONVERTIDA_OC';
-                const cli = B2B_CLIENTS.find(c => c.id === quote.clienteId || c.nombre === quote.clienteNombre);
+                const cli = appState.clients.find(c => c.id === quote.clienteId || c.nombre === quote.clienteNombre);
                 const newOcNumber = `OC-${88440 + appState.purchaseOrders.length}`;
                 const newOC = {
                     ocNumero: newOcNumber,
@@ -1713,10 +1884,18 @@ function setupEvents() {
                     const savedMap = {};
                     appState.clients.forEach(c => { savedMap[c.id] = c.diasEntrega; });
                     localStorage.setItem('interfrutd_client_days', JSON.stringify(savedMap));
+                    localStorage.setItem('interfrutd_clients_v3', JSON.stringify(appState.clients));
                 } catch (err) {}
 
                 renderOrdersAndInventoryModule();
                 showToast(`Programación de ${cli.nombre} actualizada (${cli.diasEntrega.join(', ')})`, 'fa-calendar-check');
+                return;
+            }
+
+            const editBtn = e.target.closest('.btn-edit-client');
+            if (editBtn) {
+                const cid = editBtn.getAttribute('data-cli');
+                openClientModal(cid);
                 return;
             }
 
@@ -1744,6 +1923,46 @@ function setupEvents() {
                 showToast(`Cliente ${cli.nombre} cargado en el Cotizador B2B`, 'fa-file-invoice-dollar');
             }
         });
+    }
+
+    // Modal de Creación / Edición de Cliente
+    const btnOpenNewClient = document.getElementById('btnOpenNewClientModal');
+    if (btnOpenNewClient) btnOpenNewClient.addEventListener('click', () => openClientModal(null));
+
+    const btnQuickNewQuote = document.getElementById('btnQuickNewClientFromQuote');
+    if (btnQuickNewQuote) btnQuickNewQuote.addEventListener('click', () => openClientModal(null));
+
+    const modalClient = document.getElementById('clientFormModal');
+    const btnCloseClient = document.getElementById('btnCloseClientModal');
+    const btnCancelClient = document.getElementById('btnCancelClientModal');
+    if (btnCloseClient && modalClient) {
+        btnCloseClient.addEventListener('click', () => modalClient.classList.remove('open'));
+    }
+    if (btnCancelClient && modalClient) {
+        btnCancelClient.addEventListener('click', () => modalClient.classList.remove('open'));
+    }
+    if (modalClient) {
+        modalClient.addEventListener('click', (e) => {
+            if (e.target === modalClient) modalClient.classList.remove('open');
+        });
+    }
+
+    const dayPillsForm = document.querySelectorAll('#clientFormDayPills .day-pill-btn');
+    dayPillsForm.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const isAct = btn.classList.contains('active');
+            const activeCount = document.querySelectorAll('#clientFormDayPills .day-pill-btn.active').length;
+            if (isAct && activeCount <= 1) {
+                showToast('El cliente debe tener al menos 1 día de despacho seleccionado.', 'fa-triangle-exclamation');
+                return;
+            }
+            btn.classList.toggle('active');
+        });
+    });
+
+    const btnSaveClient = document.getElementById('btnSaveClientModal');
+    if (btnSaveClient) {
+        btnSaveClient.addEventListener('click', saveClientFormData);
     }
 
     document.querySelectorAll('#ocStatusFilterGroup .chip-btn').forEach(btn => {
@@ -1852,7 +2071,7 @@ function setupEvents() {
                 },
                 {
                     name: '2_Programacion_Clientes',
-                    data: B2B_CLIENTS.map(c => ({
+                    data: appState.clients.map(c => ({
                         ID: c.id,
                         Cliente: c.nombre,
                         Segmento: c.segmento,
