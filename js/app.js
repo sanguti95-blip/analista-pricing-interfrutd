@@ -573,42 +573,62 @@ function renderQuotesModule() {
     // Renderizar tarjetas de cotizaciones guardadas
     const listCont = document.getElementById('savedQuotesListContainer');
     if (listCont) {
-        listCont.innerHTML = appState.quotes.map(q => {
-            const rev = q.items.reduce((s, i) => s + i.cantidad * (i.precioFinal || i.precioLista), 0);
-            const cost = q.items.reduce((s, i) => s + i.cantidad * i.costoUnit, 0);
-            const marg = rev > 0 ? ((rev - cost) / rev) * 100 : 0;
-            const isCurrent = q.id === draft.id;
-
-            let statusBadge = `<span class="badge badge-info">${escapeHtml(q.estado)}</span>`;
-            if (q.estado === 'APROBADA' || q.estado === 'CONVERTIDA_OC') {
-                statusBadge = `<span class="badge badge-success">${escapeHtml(q.estado)}</span>`;
-            }
-
-            return `
-                <div style="background:var(--bg-elevated); border:1px solid ${isCurrent ? 'var(--brand-green)' : 'var(--border-color)'}; border-radius:var(--radius-sm); padding:13px 15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
-                        <div>
-                            <strong style="color:var(--brand-green); font-size:13.5px;">${escapeHtml(q.id)}</strong>
-                            <span style="font-size:11.5px; color:var(--text-muted); margin-left:6px;">${escapeHtml(q.fecha)}</span>
-                            <div style="font-weight:700; font-size:14px; margin-top:2px;">${escapeHtml(q.clienteNombre)}</div>
-                        </div>
-                        ${statusBadge}
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-secondary); margin:8px 0;">
-                        <span>Lista: <strong>${escapeHtml(q.listaPrecio)}</strong> · ${q.items.length} SKUs</span>
-                        <span>Monto: <strong style="color:var(--text-main);">${formatCRC(rev)}</strong> (Margen: <strong>${formatPct(marg, 1)}</strong>)</span>
-                    </div>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                        <button type="button" class="btn btn-secondary btn-sm btn-load-quote" data-qid="${escapeHtml(q.id)}">
-                            <i class="fa-solid fa-pen-to-square"></i> Editar
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm btn-convert-quote-oc" data-qid="${escapeHtml(q.id)}">
-                            <i class="fa-solid fa-truck-Arrow-right"></i> Convertir a Orden de Compra (OC)
-                        </button>
-                    </div>
+        if (appState.quotes.length === 0) {
+            listCont.innerHTML = `
+                <div style="background:var(--bg-elevated); border:1px dashed var(--border-color); border-radius:var(--radius-sm); padding:24px 16px; text-align:center; color:var(--text-muted); font-size:12.5px;">
+                    <i class="fa-solid fa-folder-open" style="font-size:24px; color:var(--text-muted); margin-bottom:8px; display:block;"></i>
+                    No hay cotizaciones guardadas en cartera activa.
                 </div>
             `;
-        }).join('');
+        } else {
+            listCont.innerHTML = appState.quotes.map(q => {
+                const rev = q.items.reduce((s, i) => s + i.cantidad * (i.precioFinal || i.precioLista), 0);
+                const cost = q.items.reduce((s, i) => s + i.cantidad * i.costoUnit, 0);
+                const marg = rev > 0 ? ((rev - cost) / rev) * 100 : 0;
+                const isCurrent = q.id === draft.id;
+
+                let statusBadge = `<span class="badge badge-info">${escapeHtml(q.estado)}</span>`;
+                if (q.estado === 'APROBADA' || q.estado === 'RECIBIDA_CLIENTE') {
+                    statusBadge = `<span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Recibida / Aprobada</span>`;
+                } else if (q.estado === 'CONVERTIDA_OC') {
+                    statusBadge = `<span class="badge badge-success"><i class="fa-solid fa-truck-fast"></i> Convertida OC</span>`;
+                }
+
+                const isApprovedOrOc = q.estado === 'APROBADA' || q.estado === 'RECIBIDA_CLIENTE' || q.estado === 'CONVERTIDA_OC';
+
+                return `
+                    <div style="background:var(--bg-elevated); border:1px solid ${isCurrent ? 'var(--brand-green)' : 'var(--border-color)'}; border-radius:var(--radius-sm); padding:13px 15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+                            <div>
+                                <strong style="color:var(--brand-green); font-size:13.5px;">${escapeHtml(q.id)}</strong>
+                                <span style="font-size:11.5px; color:var(--text-muted); margin-left:6px;">${escapeHtml(q.fecha)}</span>
+                                <div style="font-weight:700; font-size:14px; margin-top:2px;">${escapeHtml(q.clienteNombre)}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-secondary); margin:8px 0;">
+                            <span>Lista: <strong>${escapeHtml(q.listaPrecio)}</strong> · ${q.items.length} SKUs</span>
+                            <span>Monto: <strong style="color:var(--text-main);">${formatCRC(rev)}</strong> (Margen: <strong>${formatPct(marg, 1)}</strong>)</span>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; align-items:center;">
+                            <button type="button" class="btn btn-secondary btn-sm btn-load-quote" data-qid="${escapeHtml(q.id)}" title="Cargar en el constructor para editar">
+                                <i class="fa-solid fa-pen-to-square"></i> Editar
+                            </button>
+                            ${!isApprovedOrOc ? `
+                            <button type="button" class="btn btn-secondary btn-sm btn-approve-quote" data-qid="${escapeHtml(q.id)}" title="Marcar como Recibida / Aprobada por el cliente">
+                                <i class="fa-solid fa-clipboard-check" style="color:var(--brand-green-light);"></i> Dar Recibida
+                            </button>` : ''}
+                            <button type="button" class="btn btn-primary btn-sm btn-convert-quote-oc" data-qid="${escapeHtml(q.id)}" title="Generar Orden de Compra (OC)">
+                                <i class="fa-solid fa-truck-Arrow-right"></i> Convertir a OC
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm btn-delete-quote" data-qid="${escapeHtml(q.id)}" title="Eliminar cotización de cartera" style="margin-left:auto;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     }
 }
 
@@ -1186,6 +1206,11 @@ function renderOrdersAndInventoryModule() {
             return true;
         });
 
+        if (filteredOCs.length === 0) {
+            ocTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:22px 14px; color:var(--text-muted); font-size:12.5px;">No hay órdenes de compra registradas con el filtro activo.</td></tr>`;
+            return;
+        }
+
         ocTbody.innerHTML = filteredOCs.map(oc => {
             const pedida = oc.lineas.reduce((s, l) => s + l.cantPedida, 0);
             const desp = oc.lineas.reduce((s, l) => s + l.cantDespachada, 0);
@@ -1226,12 +1251,23 @@ function renderOrdersAndInventoryModule() {
                     </td>
                     <td>${renderOcStepper(oc.estado)}</td>
                     <td class="center-col" style="white-space:nowrap;">
-                        <button type="button" class="btn btn-secondary btn-sm btn-view-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Auditar líneas de la orden">
-                            <i class="fa-solid fa-list-check"></i>
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm btn-advance-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Avanzar estado del flujo comercial">
-                            <i class="fa-solid fa-forward-step"></i>
-                        </button>
+                        <div style="display:inline-flex; align-items:center; gap:5px;">
+                            <button type="button" class="btn btn-secondary btn-sm btn-view-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Auditar líneas de la orden">
+                                <i class="fa-solid fa-list-check"></i>
+                            </button>
+                            ${oc.estado !== 'ENTREGADA' ? `
+                            <button type="button" class="btn btn-secondary btn-sm btn-mark-delivered-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Marcar como Recibida / Entregada en Andén en 1 clic">
+                                <i class="fa-solid fa-circle-check" style="color:var(--brand-green-light);"></i>
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm btn-advance-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Avanzar etapa logística">
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>` : `
+                            <span class="badge badge-success" style="font-size:10.5px;"><i class="fa-solid fa-circle-check"></i> Recibida</span>
+                            `}
+                            <button type="button" class="btn btn-danger btn-sm btn-delete-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Eliminar / Cancelar Orden de Compra">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -1771,6 +1807,36 @@ function setupEvents() {
                 loadQuoteIntoBuilder(btnLoad.getAttribute('data-qid'));
                 return;
             }
+
+            const btnApprove = e.target.closest('.btn-approve-quote');
+            if (btnApprove) {
+                const qid = btnApprove.getAttribute('data-qid');
+                const quote = appState.quotes.find(q => q.id === qid);
+                if (!quote) return;
+                quote.estado = 'RECIBIDA_CLIENTE';
+                try {
+                    localStorage.setItem('interfrutd_quotes', JSON.stringify(appState.quotes));
+                } catch (err) {}
+                renderQuotesModule();
+                showToast(`Cotización ${quote.id} marcada como Recibida / Aprobada por el cliente`, 'fa-circle-check');
+                return;
+            }
+
+            const btnDelete = e.target.closest('.btn-delete-quote');
+            if (btnDelete) {
+                const qid = btnDelete.getAttribute('data-qid');
+                const idx = appState.quotes.findIndex(q => q.id === qid);
+                if (idx >= 0) {
+                    const removed = appState.quotes.splice(idx, 1)[0];
+                    try {
+                        localStorage.setItem('interfrutd_quotes', JSON.stringify(appState.quotes));
+                    } catch (err) {}
+                    renderQuotesModule();
+                    showToast(`Cotización ${qid} (${removed.clienteNombre}) eliminada de cartera`, 'fa-trash');
+                }
+                return;
+            }
+
             const btnConvert = e.target.closest('.btn-convert-quote-oc');
             if (btnConvert) {
                 const qid = btnConvert.getAttribute('data-qid');
@@ -1982,6 +2048,35 @@ function setupEvents() {
                 const ocNum = btnView.getAttribute('data-oc');
                 const oc = appState.purchaseOrders.find(x => x.ocNumero === ocNum);
                 if (oc) openOcDetailModal(oc);
+                return;
+            }
+
+            const btnMarkDelivered = e.target.closest('.btn-mark-delivered-oc');
+            if (btnMarkDelivered) {
+                const ocNum = btnMarkDelivered.getAttribute('data-oc');
+                const oc = appState.purchaseOrders.find(x => x.ocNumero === ocNum);
+                if (!oc) return;
+                oc.estado = 'ENTREGADA';
+                try {
+                    localStorage.setItem('interfrutd_purchase_orders_v2', JSON.stringify(appState.purchaseOrders));
+                } catch (err) {}
+                renderOrdersAndInventoryModule();
+                showToast(`Orden ${oc.ocNumero} marcada como RECIBIDA / ENTREGADA en andén`, 'fa-circle-check');
+                return;
+            }
+
+            const btnDeleteOc = e.target.closest('.btn-delete-oc');
+            if (btnDeleteOc) {
+                const ocNum = btnDeleteOc.getAttribute('data-oc');
+                const idx = appState.purchaseOrders.findIndex(x => x.ocNumero === ocNum);
+                if (idx >= 0) {
+                    const removed = appState.purchaseOrders.splice(idx, 1)[0];
+                    try {
+                        localStorage.setItem('interfrutd_purchase_orders_v2', JSON.stringify(appState.purchaseOrders));
+                    } catch (err) {}
+                    renderOrdersAndInventoryModule();
+                    showToast(`Orden ${ocNum} (${removed.clienteNombre}) eliminada del pipeline`, 'fa-trash');
+                }
                 return;
             }
 
