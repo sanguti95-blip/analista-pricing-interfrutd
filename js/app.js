@@ -100,16 +100,22 @@ function initStateData() {
     } catch (e) {}
     syncChannelMarginInputs();
 
-    // Clonar catálogo base y aplicar precios personalizados si existen en localStorage
+    // Clonar catálogo base y aplicar precios/costos personalizados si existen en localStorage
     let savedPriceOverrides = {};
+    let savedCostOverrides = {};
     try {
         const raw = localStorage.getItem('interfrutd_price_overrides');
         if (raw) savedPriceOverrides = JSON.parse(raw) || {};
+        const rawCost = localStorage.getItem('interfrutd_cost_overrides');
+        if (rawCost) savedCostOverrides = JSON.parse(rawCost) || {};
     } catch (e) {}
 
     appState.catalog = INTERFRUTD_CATALOG.map(item => {
         const copy = { ...item };
-        if (savedPriceOverrides[copy.sku] !== undefined) {
+        if (savedCostOverrides[copy.sku] !== undefined && Number(savedCostOverrides[copy.sku]) > 0) {
+            copy.costoReposicion = Number(savedCostOverrides[copy.sku]);
+        }
+        if (savedPriceOverrides[copy.sku] !== undefined && Number(savedPriceOverrides[copy.sku]) > 0 && Number(savedPriceOverrides[copy.sku]) < 500000) {
             copy.precioDetalle = Number(savedPriceOverrides[copy.sku]);
         }
         recalcSkuMetrics(copy);
@@ -152,6 +158,8 @@ function initStateData() {
 
 function recalcSkuMetrics(item) {
     const cost = item.costoReposicion > 0 ? item.costoReposicion : item.costoActual;
+    item.varCostoPct = item.costoActual > 0 ? Math.round(((cost - item.costoActual) / item.costoActual) * 1000) / 10 : 0;
+
     const mSuper = (appState.channelMargins.SUPERMERCADO || 24) / 100;
     const mHoreca = (appState.channelMargins.HORECA || 28) / 100;
     const mMayorista = (appState.channelMargins.MAYORISTA || 18) / 100;
@@ -162,9 +170,15 @@ function recalcSkuMetrics(item) {
     item.precioHoreca = Math.max(20, Math.round((cost / (1 - mHoreca)) / 5) * 5);
     item.precioSugeridoMeta = Math.max(15, Math.round((cost / (1 - mDetalle)) / 5) * 5);
 
-    const price = item.precioDetalle > 0 ? item.precioDetalle : item.precioSugeridoMeta;
+    if (item.precioDetalle >= 500000 || item.precioDetalle <= 0) {
+        item.precioDetalle = item.precioSugeridoMeta;
+    }
+
+    const price = item.precioDetalle;
     item.margenReposicionPct = Math.round(((price - cost) / price) * 1000) / 10;
     item.margenActualPct = Math.round(((price - item.costoActual) / price) * 1000) / 10;
+    item.ventasMensualesCrc = Math.round(item.demandaMensualUnd * price);
+    item.utilidadMensualCrc = Math.round(item.demandaMensualUnd * (price - cost));
 
     if (item.margenReposicionPct < 16) item.estadoPrecio = 'MARGEN_CRITICO';
     else if (item.varCostoPct >= 6) item.estadoPrecio = 'COSTO_SUBIO';
@@ -224,7 +238,7 @@ function renderPricingModule() {
                 <div class="kpi-header"><span>Margen Bruto Ponderado</span><i class="fa-solid fa-percent"></i></div>
                 <div class="kpi-value">${formatPct(weightedMarginPct, 1)}</div>
                 <div class="kpi-sub">
-                    <span>Meta simulada: <strong>${appState.targetMarginSimPct}%</strong></span>
+                    <span>Meta Detalle: <strong>${appState.channelMargins.DETALLE}%</strong></span>
                     <span>· Utilidad: ${formatCRC(totalProfit)}/mes</span>
                 </div>
             </div>
@@ -252,15 +266,18 @@ function renderPricingModule() {
     const catalogCont = document.getElementById('pricingCatalogContainer');
     const cenadaCont = document.getElementById('cenadaComparisonContainer');
     const quickChips = document.getElementById('pricingQuickChips');
+    const btnOptimize = document.getElementById('btnApplySuggestedPrices');
     if (appState.pricingView === 'cenada') {
         if (catalogCont) catalogCont.style.display = 'none';
         if (quickChips) quickChips.style.visibility = 'hidden';
+        if (btnOptimize) btnOptimize.style.display = 'none';
         if (cenadaCont) cenadaCont.style.display = 'block';
         renderCenadaComparisonTable();
         return;
     } else {
         if (catalogCont) catalogCont.style.display = 'block';
         if (quickChips) quickChips.style.visibility = 'visible';
+        if (btnOptimize) btnOptimize.style.display = '';
         if (cenadaCont) cenadaCont.style.display = 'none';
     }
 
@@ -277,11 +294,11 @@ function renderPricingModule() {
     if (!tbody) return;
 
     tbody.innerHTML = rows.map(item => {
-        const costVal = item.costoReposicion > 0 ? item.costoReposicion : item.costoActual;
+        const costVal = Math.round(item.costoReposicion > 0 ? item.costoReposicion : item.costoActual);
         const varInline = item.varCostoPct >= 6
-            ? `<span class="badge badge-danger" style="margin-left:5px; font-size:10px;">+${formatPct(item.varCostoPct, 0)}</span>`
+            ? `<span class="badge badge-danger" style="margin-left:4px; font-size:10px;">+${formatPct(item.varCostoPct, 0)}</span>`
             : (item.varCostoPct < 0
-                ? `<span class="badge badge-success" style="margin-left:5px; font-size:10px;">${formatPct(item.varCostoPct, 0)}</span>`
+                ? `<span class="badge badge-success" style="margin-left:4px; font-size:10px;">${formatPct(item.varCostoPct, 0)}</span>`
                 : '');
 
         let marginBadgeClass = 'badge-success';
@@ -313,8 +330,11 @@ function renderPricingModule() {
                     <div style="font-weight:700;">${escapeHtml(item.name)}</div>
                     <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(item.categoria)} · ${escapeHtml(item.unidad)} (x${item.factorEmpaque})</div>
                 </td>
-                <td class="num-col" style="font-weight:700; white-space:nowrap;">
-                    ${formatCRC(costVal)}${varInline}
+                <td class="num-col" style="white-space:nowrap;">
+                    <div style="display:inline-flex; align-items:center;">
+                        <input type="number" class="inline-price-input inline-cost-input" data-sku="${escapeHtml(item.sku)}" value="${costVal}" min="5" step="5" style="width:78px;" title="Editar Costo de Reposición (COGS)">
+                        ${varInline}
+                    </div>
                 </td>
                 <td class="num-col">
                     <div style="font-weight:700;">${formatCRC(item.precioSupermercado)}</div>
@@ -324,7 +344,7 @@ function renderPricingModule() {
                 <td class="num-col" style="color:var(--text-secondary);">${formatCRC(item.precioMayorista)}</td>
                 <td class="num-col" style="white-space:nowrap;">
                     <div style="display:inline-flex; align-items:center; gap:6px;">
-                        <input type="number" class="inline-price-input" data-sku="${escapeHtml(item.sku)}" value="${item.precioDetalle}" min="5" step="5">
+                        <input type="number" class="inline-price-input inline-retail-input" data-sku="${escapeHtml(item.sku)}" value="${item.precioDetalle}" min="5" step="5">
                         <span class="badge ${marginBadgeClass}">${formatPct(item.margenReposicionPct, 1)}</span>
                     </div>
                 </td>
@@ -354,9 +374,13 @@ function renderCenadaComparisonTable() {
     });
 
     tbody.innerHTML = filtered.map(r => {
-        const diff = Number(r.diffColones) || 0;
-        const pct = Number(r.pctDiffModa) || 0;
-        let badge = `<span class="badge badge-info">Alineado</span>`;
+        const catMatch = appState.catalog.find(x => x.sku === String(r.frumusaCod));
+        const liveInterfrutdPrice = catMatch ? catMatch.precioMayorista : Number(r.frumusaPrecioIva) || 0;
+        const cenadaPrice = Number(r.cenadaModa) || 0;
+        const diff = liveInterfrutdPrice - cenadaPrice;
+        const pct = cenadaPrice > 0 ? (diff / cenadaPrice) * 100 : 0;
+
+        let badge = `<span class="badge badge-info">Alineado (${formatPct(pct, 1)})</span>`;
         if (pct <= -5) badge = `<span class="badge badge-success"><i class="fa-solid fa-trophy"></i> Ventaja (${formatPct(pct, 1)})</span>`;
         else if (pct >= 8) badge = `<span class="badge badge-warning">Sobre Moda (+${formatPct(pct, 1)})</span>`;
 
@@ -365,9 +389,9 @@ function renderCenadaComparisonTable() {
                 <td><code style="font-weight:700; color:var(--brand-green);">${escapeHtml(r.frumusaCod)}</code></td>
                 <td style="font-weight:700;">${escapeHtml(r.frumusaName)}</td>
                 <td><span class="badge badge-neutral">${escapeHtml(r.frumusaUnit)}</span></td>
-                <td class="num-col" style="font-weight:800;">${formatCRC(r.frumusaPrecioIva)}</td>
+                <td class="num-col" style="font-weight:800;">${formatCRC(liveInterfrutdPrice)}</td>
                 <td>${escapeHtml(r.cenadaName)}</td>
-                <td class="num-col" style="font-weight:700;">${formatCRC(r.cenadaModa)}</td>
+                <td class="num-col" style="font-weight:700;">${formatCRC(cenadaPrice)}</td>
                 <td class="num-col" style="color:${diff <= 0 ? 'var(--success)' : 'var(--warning)'}; font-weight:700;">
                     ${diff > 0 ? '+' : ''}${formatCRC(diff)}
                 </td>
@@ -389,11 +413,15 @@ function populateQuoteSelectors() {
     }
 
     const skuSel = document.getElementById('quoteAddSkuSelect');
-    if (skuSel && skuSel.options.length === 0) {
+    if (skuSel) {
+        const currentSelectedSku = skuSel.value;
+        const activeList = appState.activeQuoteDraft?.listaPrecio || 'HORECA';
         const sorted = [...appState.catalog].sort((a, b) => a.name.localeCompare(b.name));
-        skuSel.innerHTML = sorted.map(item =>
-            `<option value="${escapeHtml(item.sku)}">[${escapeHtml(item.sku)}] ${escapeHtml(item.name)} (${escapeHtml(item.unidad)}) — HORECA: ${formatCRC(item.precioHoreca)}</option>`
-        ).join('');
+        skuSel.innerHTML = sorted.map(item => {
+            const p = getBasePriceByList(item, activeList);
+            return `<option value="${escapeHtml(item.sku)}">[${escapeHtml(item.sku)}] ${escapeHtml(item.name)} (${escapeHtml(item.unidad)}) — ${activeList}: ${formatCRC(p)}</option>`;
+        }).join('');
+        if (currentSelectedSku) skuSel.value = currentSelectedSku;
     }
 }
 
@@ -1227,6 +1255,31 @@ function setupEvents() {
         nEl.addEventListener('change', (e) => updateMargin(e.target.value, true));
     });
 
+    const btnResetMargins = document.getElementById('btnResetChannelMargins');
+    if (btnResetMargins) {
+        btnResetMargins.addEventListener('click', () => {
+            appState.channelMargins = {
+                SUPERMERCADO: 24,
+                HORECA: 28,
+                MAYORISTA: 18,
+                DETALLE: 32
+            };
+            syncChannelMarginInputs();
+            try {
+                localStorage.removeItem('interfrutd_channel_margins');
+                localStorage.removeItem('interfrutd_price_overrides');
+                localStorage.removeItem('interfrutd_cost_overrides');
+            } catch (e) {}
+            appState.catalog = INTERFRUTD_CATALOG.map(item => {
+                const copy = { ...item };
+                recalcSkuMetrics(copy);
+                return copy;
+            });
+            renderActiveModule();
+            showToast('Márgenes corporativos (24% / 28% / 18% / 32%) y precios/costos base restaurados.', 'fa-rotate-left');
+        });
+    }
+
     document.querySelectorAll('#pricingQuickChips .chip-btn').forEach(chip => {
         chip.addEventListener('click', () => {
             document.querySelectorAll('#pricingQuickChips .chip-btn').forEach(c => c.classList.remove('active'));
@@ -1250,10 +1303,29 @@ function setupEvents() {
         });
     }
 
-    // Edición en línea de precios y botón de enviar a cotización
+    // Edición en línea de costos (COGS), precios detalle y botón de enviar a cotización
     const pricingTbody = document.getElementById('pricingTableBody');
     if (pricingTbody) {
         pricingTbody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('inline-cost-input')) {
+                const sku = e.target.getAttribute('data-sku');
+                const newCost = Math.max(5, Number(e.target.value) || 0);
+                const item = appState.catalog.find(x => x.sku === sku);
+                if (item) {
+                    item.costoReposicion = newCost;
+                    recalcSkuMetrics(item);
+                    try {
+                        const raw = localStorage.getItem('interfrutd_cost_overrides');
+                        const map = raw ? JSON.parse(raw) : {};
+                        map[sku] = newCost;
+                        localStorage.setItem('interfrutd_cost_overrides', JSON.stringify(map));
+                    } catch (err) {}
+                    renderPricingModule();
+                    showToast(`Costo COGS actualizado para SKU ${sku}: ${formatCRC(newCost)} (Margen: ${formatPct(item.margenReposicionPct, 1)})`, 'fa-coins');
+                }
+                return;
+            }
+
             if (e.target.classList.contains('inline-price-input')) {
                 const sku = e.target.getAttribute('data-sku');
                 const newPrice = Math.max(5, Number(e.target.value) || 0);
@@ -1615,9 +1687,9 @@ function setupEvents() {
         clientSchedTbody.addEventListener('click', (e) => {
             const dayBtn = e.target.closest('.day-pill-btn');
             if (dayBtn) {
-                const cid = dayBtn.getAttribute('data-clientid');
+                const cid = dayBtn.getAttribute('data-cli') || dayBtn.getAttribute('data-clientid');
                 const daycode = dayBtn.getAttribute('data-daycode');
-                const cli = B2B_CLIENTS.find(c => c.id === cid);
+                const cli = appState.clients.find(c => c.id === cid);
                 if (!cli || !daycode) return;
 
                 if (!Array.isArray(cli.diasEntrega)) cli.diasEntrega = ['L', 'K', 'V'];
@@ -1634,9 +1706,12 @@ function setupEvents() {
                     cli.diasEntrega.sort((a, b) => order.indexOf(a) - order.indexOf(b));
                 }
 
+                const baseCli = B2B_CLIENTS.find(c => c.id === cid);
+                if (baseCli) baseCli.diasEntrega = [...cli.diasEntrega];
+
                 try {
                     const savedMap = {};
-                    B2B_CLIENTS.forEach(c => { savedMap[c.id] = c.diasEntrega; });
+                    appState.clients.forEach(c => { savedMap[c.id] = c.diasEntrega; });
                     localStorage.setItem('interfrutd_client_days', JSON.stringify(savedMap));
                 } catch (err) {}
 
@@ -1647,8 +1722,8 @@ function setupEvents() {
 
             const quoteBtn = e.target.closest('.btn-schedule-quote');
             if (quoteBtn) {
-                const cid = quoteBtn.getAttribute('data-clientid');
-                const cli = B2B_CLIENTS.find(c => c.id === cid);
+                const cid = quoteBtn.getAttribute('data-cli') || quoteBtn.getAttribute('data-clientid');
+                const cli = appState.clients.find(c => c.id === cid);
                 if (!cli) return;
 
                 const draft = appState.activeQuoteDraft;
@@ -1659,7 +1734,7 @@ function setupEvents() {
                 draft.items.forEach(it => {
                     const cat = appState.catalog.find(x => x.sku === it.sku);
                     if (cat) {
-                        it.precioLista = getPriceByChannelKey(cat, draft.listaPrecio);
+                        it.precioLista = getBasePriceByList(cat, draft.listaPrecio);
                         it.precioFinal = Math.round(it.precioLista * (1 - (it.descuentoPct || 0) / 100));
                     }
                 });
