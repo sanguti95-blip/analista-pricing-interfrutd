@@ -9660,17 +9660,6 @@ export const CENADA_BENCHMARK = [
 
 export const B2B_CLIENTS = [
   {
-    "id": "CLI-001",
-    "nombre": "Hoteles Marriott & Resort Costa Rica",
-    "segmento": "HORECA Premium",
-    "listaAsignada": "HORECA",
-    "descuentoBasePct": 3,
-    "diasCredito": 30,
-    "contacto": "Chef Ejecutivo Carlos Méndez",
-    "email": "compras.cr@marriott.com",
-    "ruta": "GAM Oeste - Belén / Escazú"
-  },
-  {
     "id": "CLI-002",
     "nombre": "Auto Mercado S.A. (CEDI Heredia)",
     "segmento": "Supermercados",
@@ -9679,7 +9668,26 @@ export const B2B_CLIENTS = [
     "diasCredito": 45,
     "contacto": "Licda. Andrea Rojas - Compras Perecederos",
     "email": "arojas@automercado.biz",
-    "ruta": "CEDI Santo Domingo / Heredia"
+    "ruta": "CEDI Santo Domingo / Heredia",
+    "diasEntrega": ["L", "M", "K", "J", "V", "S"],
+    "ventanaAnden": "04:30 AM – 06:00 AM",
+    "horaCorte": "Día ant. 01:00 PM",
+    "slaMeta": 98
+  },
+  {
+    "id": "CLI-001",
+    "nombre": "Hoteles Marriott & Resort Costa Rica",
+    "segmento": "HORECA Premium",
+    "listaAsignada": "HORECA",
+    "descuentoBasePct": 3,
+    "diasCredito": 30,
+    "contacto": "Chef Ejecutivo Carlos Méndez",
+    "email": "compras.cr@marriott.com",
+    "ruta": "GAM Oeste - Belén / Escazú",
+    "diasEntrega": ["L", "K", "V"],
+    "ventanaAnden": "05:30 AM – 07:00 AM",
+    "horaCorte": "Día ant. 03:00 PM",
+    "slaMeta": 95
   },
   {
     "id": "CLI-003",
@@ -9690,18 +9698,11 @@ export const B2B_CLIENTS = [
     "diasCredito": 30,
     "contacto": "Ing. Roberto Vargas - Supply Chain",
     "email": "abastecimiento@grupogastronomico.cr",
-    "ruta": "GAM Consolidado"
-  },
-  {
-    "id": "CLI-004",
-    "nombre": "Distribuidora Mayorista del Valle Central",
-    "segmento": "Mayorista / Ruteo",
-    "listaAsignada": "MAYORISTA",
-    "descuentoBasePct": 2,
-    "diasCredito": 15,
-    "contacto": "Sr. Mauricio Solís",
-    "email": "pedidos@mayoristavalle.co.cr",
-    "ruta": "CENADA / Alajuela"
+    "ruta": "GAM Consolidado",
+    "diasEntrega": ["M", "J", "S"],
+    "ventanaAnden": "06:00 AM – 08:00 AM",
+    "horaCorte": "Día ant. 04:00 PM",
+    "slaMeta": 95
   },
   {
     "id": "CLI-005",
@@ -9712,7 +9713,11 @@ export const B2B_CLIENTS = [
     "diasCredito": 30,
     "contacto": "Nut. Sofía Jiménez",
     "email": "compras.coyol@sodexo.com",
-    "ruta": "Ruta Alajuela / Coyol"
+    "ruta": "Ruta Alajuela / Coyol",
+    "diasEntrega": ["L", "M", "K", "J", "V"],
+    "ventanaAnden": "05:00 AM – 06:30 AM",
+    "horaCorte": "Día ant. 02:00 PM",
+    "slaMeta": 95
   },
   {
     "id": "CLI-006",
@@ -9723,7 +9728,26 @@ export const B2B_CLIENTS = [
     "diasCredito": 15,
     "contacto": "Gerencia Operativa Tienda 401",
     "email": "gerencia@countryhouse.cr",
-    "ruta": "Santo Domingo de Heredia"
+    "ruta": "Santo Domingo de Heredia",
+    "diasEntrega": ["L", "K", "V", "S"],
+    "ventanaAnden": "06:30 AM – 07:30 AM",
+    "horaCorte": "Día ant. 05:00 PM",
+    "slaMeta": 98
+  },
+  {
+    "id": "CLI-004",
+    "nombre": "Distribuidora Mayorista del Valle Central",
+    "segmento": "Mayorista / Ruteo",
+    "listaAsignada": "MAYORISTA",
+    "descuentoBasePct": 2,
+    "diasCredito": 15,
+    "contacto": "Sr. Mauricio Solís",
+    "email": "pedidos@mayoristavalle.co.cr",
+    "ruta": "CENADA / Alajuela",
+    "diasEntrega": ["L", "J"],
+    "ventanaAnden": "04:00 AM – 05:30 AM",
+    "horaCorte": "Día ant. 12:00 MD",
+    "slaMeta": 92
   }
 ];
 
@@ -9886,8 +9910,11 @@ export const INITIAL_PURCHASE_ORDERS = [
   {
     "ocNumero": "OC-88410",
     "cotizacionRef": "COT-2026-0138",
+    "clienteId": "CLI-002",
+    "diaSemana": "L",
+    "ventanaAnden": "04:30 AM – 06:00 AM",
     "fechaRecepcion": "2026-10-29",
-    "fechaEntregaCompromiso": "2026-10-31",
+    "fechaEntregaCompromiso": "Lunes · 04:30 AM",
     "clienteNombre": "Auto Mercado S.A. (CEDI Heredia)",
     "segmento": "Supermercados",
     "canal": "CEDI Mayorista",
@@ -9924,8 +9951,11 @@ export const INITIAL_PURCHASE_ORDERS = [
   {
     "ocNumero": "OC-88419",
     "cotizacionRef": "COT-2026-0142",
+    "clienteId": "CLI-001",
+    "diaSemana": "K",
+    "ventanaAnden": "05:30 AM – 07:00 AM",
     "fechaRecepcion": "2026-10-30",
-    "fechaEntregaCompromiso": "2026-10-31",
+    "fechaEntregaCompromiso": "Miércoles · 05:30 AM",
     "clienteNombre": "Hoteles Marriott & Resort Costa Rica",
     "segmento": "HORECA Premium",
     "canal": "Ruta Institucional",
@@ -9962,8 +9992,11 @@ export const INITIAL_PURCHASE_ORDERS = [
   {
     "ocNumero": "OC-88425",
     "cotizacionRef": "COT-2026-0140",
+    "clienteId": "CLI-005",
+    "diaSemana": "V",
+    "ventanaAnden": "05:00 AM – 06:30 AM",
     "fechaRecepcion": "2026-10-30",
-    "fechaEntregaCompromiso": "2026-11-01",
+    "fechaEntregaCompromiso": "Viernes · 05:00 AM",
     "clienteNombre": "Comedores Industriales Sodexo Zona Franca Coyol",
     "segmento": "Institucional / Catering",
     "canal": "Ruta Institucional",
@@ -10000,8 +10033,11 @@ export const INITIAL_PURCHASE_ORDERS = [
   {
     "ocNumero": "OC-88431",
     "cotizacionRef": "COT-2026-0143",
+    "clienteId": "CLI-003",
+    "diaSemana": "M",
+    "ventanaAnden": "06:00 AM – 08:00 AM",
     "fechaRecepcion": "2026-10-31",
-    "fechaEntregaCompromiso": "2026-11-01",
+    "fechaEntregaCompromiso": "Martes · 06:00 AM",
     "clienteNombre": "Grupo Gastronómico Rostipollos & Casual Dining",
     "segmento": "Cadenas de Restaurantes",
     "canal": "GAM Consolidado",
@@ -10046,8 +10082,11 @@ export const INITIAL_PURCHASE_ORDERS = [
   {
     "ocNumero": "OC-88436",
     "cotizacionRef": "COT-2026-0141",
+    "clienteId": "CLI-004",
+    "diaSemana": "J",
+    "ventanaAnden": "04:00 AM – 05:30 AM",
     "fechaRecepcion": "2026-10-31",
-    "fechaEntregaCompromiso": "2026-11-02",
+    "fechaEntregaCompromiso": "Jueves · 04:00 AM",
     "clienteNombre": "Distribuidora Mayorista del Valle Central",
     "segmento": "Mayorista / Ruteo",
     "canal": "CEDI Mayorista",

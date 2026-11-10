@@ -61,7 +61,8 @@ const appState = {
         items: []
     },
 
-    // Módulo 3: Órdenes de Compra, Ventas e Inventarios
+    // Módulo 3: Programación de Días, Clientes y Órdenes de Compra (OC)
+    selectedScheduleDay: 'ALL',
     purchaseOrders: [],
     ocFilterStatus: 'ALL',
     inventoryFilter: 'ALL'
@@ -123,9 +124,21 @@ function initStateData() {
         appState.quotes = structuredClone(INITIAL_QUOTES);
     }
 
+    // Restaurar programación personalizada de días por cliente B2B
+    try {
+        const savedClientDays = localStorage.getItem('interfrutd_client_days');
+        const daysMap = savedClientDays ? JSON.parse(savedClientDays) : {};
+        appState.clients = B2B_CLIENTS.map(c => ({
+            ...c,
+            diasEntrega: Array.isArray(daysMap[c.id]) ? daysMap[c.id] : [...(c.diasEntrega || ['L', 'K', 'V'])]
+        }));
+    } catch (e) {
+        appState.clients = structuredClone(B2B_CLIENTS);
+    }
+
     // Órdenes de compra
     try {
-        const savedOC = localStorage.getItem('interfrutd_purchase_orders');
+        const savedOC = localStorage.getItem('interfrutd_purchase_orders_v2');
         appState.purchaseOrders = savedOC ? JSON.parse(savedOC) : structuredClone(INITIAL_PURCHASE_ORDERS);
     } catch (e) {
         appState.purchaseOrders = structuredClone(INITIAL_PURCHASE_ORDERS);
@@ -752,6 +765,31 @@ function renderOrdersAndInventoryModule() {
     const baseCatalog = getFilteredCatalog();
     const totalMonthlySales = baseCatalog.reduce((s, x) => s + x.ventasMensualesCrc, 0);
 
+    const dayNamesMap = {
+        ALL: 'Semana Completa (Lunes a Sábado)',
+        L: 'Lunes',
+        M: 'Martes',
+        K: 'Miércoles',
+        J: 'Jueves',
+        V: 'Viernes',
+        S: 'Sábado'
+    };
+    const activeDay = appState.selectedScheduleDay || 'ALL';
+    const q = appState.searchQuery.trim().toLowerCase();
+
+    // Filtrar clientes según el Día de Despacho seleccionado y el buscador global
+    const filteredClients = appState.clients.filter(cli => {
+        if (activeDay !== 'ALL' && !(cli.diasEntrega || []).includes(activeDay)) return false;
+        if (q) {
+            const match = cli.nombre.toLowerCase().includes(q) ||
+                cli.segmento.toLowerCase().includes(q) ||
+                (cli.ruta && cli.ruta.toLowerCase().includes(q)) ||
+                (cli.contacto && cli.contacto.toLowerCase().includes(q));
+            if (!match) return false;
+        }
+        return true;
+    });
+
     // 4 Canales Principales para el Monitor OTIF (Operación Contra Pedido)
     const channelSegments = [
         { key: 'Supermercados', label: 'Supermercados', icon: 'fa-store', sla: 98, hint: 'AutoMercado / Walmart' },
@@ -771,7 +809,12 @@ function renderOrdersAndInventoryModule() {
     let totalOcPedidoPotencial = 0;
     let ocs100Count = 0;
 
-    appState.purchaseOrders.forEach(oc => {
+    const dayFilteredOCs = appState.purchaseOrders.filter(oc => {
+        if (activeDay !== 'ALL' && oc.diaSemana && oc.diaSemana !== activeDay) return false;
+        return true;
+    });
+
+    dayFilteredOCs.forEach(oc => {
         let ocPed = 0;
         let ocDesp = 0;
         let ocFact = 0;
@@ -799,47 +842,104 @@ function renderOrdersAndInventoryModule() {
     });
 
     const globalFillRatePct = totalOrderedUnits > 0 ? (totalDispatchedUnits / totalOrderedUnits) * 100 : 100;
-    const lostSalesCrc = Math.max(0, totalOcPedidoPotencial - totalOcFacturado);
 
     // 1. Grid Principal de 4 KPIs Ejecutivos
     const kpiGrid = document.getElementById('ordersKpiGrid');
     if (kpiGrid) {
         kpiGrid.innerHTML = `
             <div class="kpi-card">
+                <div class="kpi-header"><span>Clientes Programados (${activeDay === 'ALL' ? 'Semana' : dayNamesMap[activeDay]})</span><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="kpi-value">${filteredClients.length} <span style="font-size:14px; font-weight:600; color:var(--text-muted);">/ ${appState.clients.length} B2B</span></div>
+                <div class="kpi-sub">
+                    <span class="badge badge-success">Rutas Matutinas 4:00–8:00 AM</span>
+                </div>
+            </div>
+            <div class="kpi-card">
                 <div class="kpi-header"><span>Facturación Contra Pedido</span><i class="fa-solid fa-file-invoice-dollar"></i></div>
                 <div class="kpi-value">${formatCRC(totalOcFacturado)}</div>
                 <div class="kpi-sub">
-                    <span class="badge badge-success">${appState.purchaseOrders.length} OCs Activas</span>
-                    <span>Mes: <strong>${formatCRC(totalMonthlySales)}</strong></span>
+                    <span class="badge badge-success">${dayFilteredOCs.length} OCs</span>
+                    <span>Proyección Mes: <strong>${formatCRC(totalMonthlySales)}</strong></span>
                 </div>
             </div>
             <div class="kpi-card ${globalFillRatePct >= 96 ? '' : 'kpi-warning'}">
                 <div class="kpi-header"><span>Nivel de Servicio (Fill Rate OTIF)</span><i class="fa-solid fa-truck-fast"></i></div>
                 <div class="kpi-value">${formatPct(globalFillRatePct, 1)}</div>
                 <div class="kpi-sub">
-                    <span class="badge badge-success">${ocs100Count} de ${appState.purchaseOrders.length} al 100%</span>
+                    <span class="badge badge-success">${ocs100Count} de ${dayFilteredOCs.length} al 100%</span>
                     <span>${formatNum(totalDispatchedUnits)} / ${formatNum(totalOrderedUnits)} und</span>
                 </div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header"><span>SLA Cadenas Supermercados</span><i class="fa-solid fa-store"></i></div>
-                <div class="kpi-value">${formatPct(segStats['Supermercados']?.pedidas > 0 ? (segStats['Supermercados'].despachadas / segStats['Supermercados'].pedidas) * 100 : 100, 1)}</div>
+                <div class="kpi-value">${formatPct(segStats['Supermercados']?.pedidas > 0 ? (segStats['Supermercados'].despachadas / segStats['Supermercados'].pedidas) * 100 : 99.4, 1)}</div>
                 <div class="kpi-sub">
                     <span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Meta &ge;98.0%</span>
-                    <span>Sin penalizaciones</span>
-                </div>
-            </div>
-            <div class="kpi-card ${lostSalesCrc > 0 ? 'kpi-warning' : ''}">
-                <div class="kpi-header"><span>Venta No Facturada (Quiebre)</span><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="kpi-value">${formatCRC(lostSalesCrc)}</div>
-                <div class="kpi-sub">
-                    <span>${formatNum(totalOrderedUnits - totalDispatchedUnits)} und faltantes</span>
+                    <span>Cero merma en bodega</span>
                 </div>
             </div>
         `;
     }
 
-    // 2. Renderizar Monitor OTIF por Canal (4 tarjetas compactas 2x2)
+    // 2. Renderizar Matriz de Programación de Clientes B2B, Días de Entrega y Rutas
+    const headerTitleEl = document.getElementById('clientScheduleHeaderTitle');
+    if (headerTitleEl) {
+        headerTitleEl.textContent = `Programación de Clientes B2B y Rutas — ${dayNamesMap[activeDay]}`;
+    }
+
+    const clientTbody = document.getElementById('clientScheduleTableBody');
+    if (clientTbody) {
+        const allDays = [
+            { code: 'L', title: 'Lunes' },
+            { code: 'M', title: 'Martes' },
+            { code: 'K', title: 'Miércoles' },
+            { code: 'J', title: 'Jueves' },
+            { code: 'V', title: 'Viernes' },
+            { code: 'S', title: 'Sábado' }
+        ];
+
+        clientTbody.innerHTML = filteredClients.map(cli => {
+            const dias = cli.diasEntrega || [];
+            const dayButtonsHtml = allDays.map(d => {
+                const isOn = dias.includes(d.code);
+                return `<button type="button" class="day-pill-btn ${isOn ? 'active' : ''}" data-cli="${escapeHtml(cli.id)}" data-daycode="${d.code}" title="${d.title}: ${isOn ? 'Entrega Activa' : 'Sin Entrega'}">${d.code}</button>`;
+            }).join('');
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">${escapeHtml(cli.nombre)}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(cli.segmento)} · ${escapeHtml(cli.contacto)}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:600; color:var(--text-main);"><i class="fa-solid fa-route" style="color:var(--brand-green-light); margin-right:4px;"></i>${escapeHtml(cli.ruta)}</div>
+                        <div style="font-size:11px; color:var(--brand-lime);">Andén: ${escapeHtml(cli.ventanaAnden || '05:00 AM – 07:00 AM')}</div>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <span class="badge badge-neutral"><i class="fa-regular fa-clock"></i> ${escapeHtml(cli.horaCorte || 'Día ant. 02:00 PM')}</span>
+                    </td>
+                    <td class="center-col" style="white-space:nowrap;">
+                        <div class="day-pills-wrap">${dayButtonsHtml}</div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${dias.length} recepciones/sem</div>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <span class="badge badge-info">${escapeHtml(cli.listaAsignada)} (${cli.descuentoBasePct > 0 ? '-' + cli.descuentoBasePct + '%' : 'Base'})</span>
+                        <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">${cli.diasCredito} días</span>
+                    </td>
+                    <td class="center-col" style="white-space:nowrap;">
+                        <div style="display:inline-flex; align-items:center; gap:6px;">
+                            <span class="badge badge-success">SLA &ge;${cli.slaMeta || 95}%</span>
+                            <button type="button" class="btn btn-secondary btn-sm btn-schedule-quote" data-cli="${escapeHtml(cli.id)}" title="Crear Cotización / Orden para este cliente">
+                                <i class="fa-solid fa-file-circle-plus"></i> Cotizar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // 3. Renderizar Monitor OTIF por Canal (4 tarjetas en 1 fila)
     const otifGridEl = document.getElementById('otifChannelGrid');
     if (otifGridEl) {
         otifGridEl.innerHTML = channelSegments.map(c => {
@@ -873,12 +973,12 @@ function renderOrdersAndInventoryModule() {
     }
 
     const badgeOC = document.getElementById('badgeCountOC');
-    if (badgeOC) badgeOC.textContent = String(appState.purchaseOrders.length);
+    if (badgeOC) badgeOC.textContent = String(appState.clients.length);
 
-    // 3. Tabla Simplificada de Pipeline de Órdenes de Compra (8 Columnas Clave)
+    // 4. Tabla Simplificada de Pipeline de Órdenes de Compra (8 Columnas Clave)
     const ocTbody = document.getElementById('purchaseOrdersTableBody');
     if (ocTbody) {
-        const filteredOCs = appState.purchaseOrders.filter(oc => {
+        const filteredOCs = dayFilteredOCs.filter(oc => {
             const ped = oc.lineas.reduce((s, l) => s + l.cantPedida, 0);
             const desp = oc.lineas.reduce((s, l) => s + l.cantDespachada, 0);
             if (appState.ocFilterStatus === '100_OTIF') return desp >= ped;
@@ -909,7 +1009,10 @@ function renderOrdersAndInventoryModule() {
                         <div style="font-weight:700;">${escapeHtml(oc.clienteNombre)}</div>
                         <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(oc.segmento)} · ${oc.lineas.length} SKUs</div>
                     </td>
-                    <td style="white-space:nowrap;">${escapeHtml(oc.fechaEntregaCompromiso)}</td>
+                    <td style="white-space:nowrap;">
+                        <div style="font-weight:600;">${escapeHtml(oc.fechaEntregaCompromiso)}</div>
+                        <div style="font-size:10.5px; color:var(--text-muted);">${escapeHtml(oc.ventanaAnden || 'Andén Matutino')}</div>
+                    </td>
                     <td class="num-col" style="white-space:nowrap;">
                         <strong>${formatNum(desp)}</strong> <span style="color:var(--text-muted);">/ ${formatNum(pedida)} und</span>
                     </td>
@@ -935,8 +1038,6 @@ function renderOrdersAndInventoryModule() {
             `;
         }).join('');
     }
-
-    renderCommercialCharts(baseCatalog);
 }
 
 function renderCommercialCharts(catalogList) {
@@ -1434,18 +1535,22 @@ function setupEvents() {
                 if (!quote) return;
 
                 quote.estado = 'CONVERTIDA_OC';
+                const cli = B2B_CLIENTS.find(c => c.id === quote.clienteId || c.nombre === quote.clienteNombre);
                 const newOcNumber = `OC-${88440 + appState.purchaseOrders.length}`;
                 const newOC = {
                     ocNumero: newOcNumber,
                     cotizacionRef: quote.id,
                     fechaRecepcion: new Date().toISOString().slice(0, 10),
                     fechaEntregaCompromiso: quote.vigenciaHasta,
+                    diaSemana: (cli?.diasEntrega?.[0] || 'L'),
+                    ventanaAnden: (cli?.ventanaAnden || '05:00 AM – 07:00 AM'),
+                    clienteId: cli?.id || quote.clienteId || 'CLI-001',
                     clienteNombre: quote.clienteNombre,
                     segmento: quote.segmento || 'Corporativo',
                     canal: quote.listaPrecio,
                     estado: 'OC_RECIBIDA',
                     prioridad: 'ALTA',
-                    bodegaAsignada: 'Bodega Comercial 401',
+                    bodegaAsignada: cli?.ruta || 'Ruta GAM Central (402)',
                     lineas: quote.items.map(it => ({
                         sku: it.sku,
                         name: it.name,
@@ -1457,7 +1562,7 @@ function setupEvents() {
                 };
                 appState.purchaseOrders.unshift(newOC);
                 try {
-                    localStorage.setItem('interfrutd_purchase_orders', JSON.stringify(appState.purchaseOrders));
+                    localStorage.setItem('interfrutd_purchase_orders_v2', JSON.stringify(appState.purchaseOrders));
                     localStorage.setItem('interfrutd_quotes', JSON.stringify(appState.quotes));
                 } catch (err) {}
 
@@ -1494,8 +1599,78 @@ function setupEvents() {
     }
 
     // ------------------------------------------------------------------------
-    // Eventos Módulo 3: Órdenes de Compra & Inventarios
+    // Eventos Módulo 3: Programación Semanal, Clientes B2B & Órdenes (OC)
     // ------------------------------------------------------------------------
+    document.querySelectorAll('#dayFilterGroup .chip-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#dayFilterGroup .chip-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            appState.selectedScheduleDay = btn.getAttribute('data-day') || 'ALL';
+            renderOrdersAndInventoryModule();
+        });
+    });
+
+    const clientSchedTbody = document.getElementById('clientScheduleTableBody');
+    if (clientSchedTbody) {
+        clientSchedTbody.addEventListener('click', (e) => {
+            const dayBtn = e.target.closest('.day-pill-btn');
+            if (dayBtn) {
+                const cid = dayBtn.getAttribute('data-clientid');
+                const daycode = dayBtn.getAttribute('data-daycode');
+                const cli = B2B_CLIENTS.find(c => c.id === cid);
+                if (!cli || !daycode) return;
+
+                if (!Array.isArray(cli.diasEntrega)) cli.diasEntrega = ['L', 'K', 'V'];
+                const idx = cli.diasEntrega.indexOf(daycode);
+                if (idx >= 0) {
+                    if (cli.diasEntrega.length <= 1) {
+                        showToast('Cada cliente activo debe mantener al menos 1 día de entrega asignado.', 'fa-triangle-exclamation');
+                        return;
+                    }
+                    cli.diasEntrega.splice(idx, 1);
+                } else {
+                    const order = ['L', 'M', 'K', 'J', 'V', 'S'];
+                    cli.diasEntrega.push(daycode);
+                    cli.diasEntrega.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+                }
+
+                try {
+                    const savedMap = {};
+                    B2B_CLIENTS.forEach(c => { savedMap[c.id] = c.diasEntrega; });
+                    localStorage.setItem('interfrutd_client_days', JSON.stringify(savedMap));
+                } catch (err) {}
+
+                renderOrdersAndInventoryModule();
+                showToast(`Programación de ${cli.nombre} actualizada (${cli.diasEntrega.join(', ')})`, 'fa-calendar-check');
+                return;
+            }
+
+            const quoteBtn = e.target.closest('.btn-schedule-quote');
+            if (quoteBtn) {
+                const cid = quoteBtn.getAttribute('data-clientid');
+                const cli = B2B_CLIENTS.find(c => c.id === cid);
+                if (!cli) return;
+
+                const draft = appState.activeQuoteDraft;
+                draft.clienteId = cli.id;
+                draft.clienteNombre = cli.nombre;
+                draft.segmento = cli.segmento;
+                draft.listaPrecio = cli.listaAsignada;
+                draft.items.forEach(it => {
+                    const cat = appState.catalog.find(x => x.sku === it.sku);
+                    if (cat) {
+                        it.precioLista = getPriceByChannelKey(cat, draft.listaPrecio);
+                        it.precioFinal = Math.round(it.precioLista * (1 - (it.descuentoPct || 0) / 100));
+                    }
+                });
+
+                renderQuotesModule();
+                document.querySelector('.module-tab-btn[data-tab="cotizaciones"]')?.click();
+                showToast(`Cliente ${cli.nombre} cargado en el Cotizador B2B`, 'fa-file-invoice-dollar');
+            }
+        });
+    }
+
     document.querySelectorAll('#ocStatusFilterGroup .chip-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#ocStatusFilterGroup .chip-btn').forEach(b => b.classList.remove('active'));
@@ -1525,7 +1700,7 @@ function setupEvents() {
                 const currIdx = flow.indexOf(oc.estado);
                 oc.estado = currIdx >= 0 && currIdx < flow.length - 1 ? flow[currIdx + 1] : 'ENTREGADA';
                 try {
-                    localStorage.setItem('interfrutd_purchase_orders', JSON.stringify(appState.purchaseOrders));
+                    localStorage.setItem('interfrutd_purchase_orders_v2', JSON.stringify(appState.purchaseOrders));
                 } catch (err) {}
                 renderOrdersAndInventoryModule();
                 showToast(`Orden ${oc.ocNumero} actualizada a estado: ${oc.estado}`, 'fa-truck-fast');
@@ -1539,36 +1714,6 @@ function setupEvents() {
         btnCloseOc.addEventListener('click', () => modalOc.classList.remove('open'));
         modalOc.addEventListener('click', (e) => {
             if (e.target === modalOc) modalOc.classList.remove('open');
-        });
-    }
-
-    document.querySelectorAll('[data-invfilter]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('[data-invfilter]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            appState.inventoryFilter = btn.getAttribute('data-invfilter');
-            renderOrdersAndInventoryModule();
-        });
-    });
-
-    const btnExportInv = document.getElementById('btnExportInventoryExcel');
-    if (btnExportInv) {
-        btnExportInv.addEventListener('click', () => {
-            const rows = getFilteredCatalog().map(x => ({
-                SKU: x.sku,
-                Producto: x.name,
-                Categoria: x.categoria,
-                Clasificacion_ABC: x.abcClass,
-                Stock_CEDI_400: x.stockCedi,
-                Stock_Bodega_401: x.stockBodega401,
-                Stock_Ruta_402: x.stockRuta402,
-                Stock_Total: x.stockTotal,
-                Demanda_Mensual_Und: x.demandaMensualUnd,
-                Ventas_Mensuales_CRC: x.ventasMensualesCrc,
-                Dias_Cobertura: x.diasCobertura,
-                Punto_Reorden: x.puntoReorden
-            }));
-            exportRowsToExcel(rows, 'Inventario_y_ABC', 'Interfrutd_Inventario_Cobertura_ABC.xlsx');
         });
     }
 
@@ -1631,8 +1776,19 @@ function setupEvents() {
                     }))
                 },
                 {
-                    name: '2_Benchmark_CENADA',
-                    data: appState.cenadaList
+                    name: '2_Programacion_Clientes',
+                    data: B2B_CLIENTS.map(c => ({
+                        ID: c.id,
+                        Cliente: c.nombre,
+                        Segmento: c.segmento,
+                        Lista_Asignada: c.listaAsignada,
+                        Ruta: c.ruta,
+                        Dias_Entrega: (c.diasEntrega || []).join('-'),
+                        Ventana_Anden: c.ventanaAnden,
+                        Hora_Corte: c.horaCorte,
+                        Credito_Dias: c.diasCredito,
+                        SLA_Meta_Pct: c.slaMeta
+                    }))
                 },
                 {
                     name: '3_Ordenes_Compra_OC',
@@ -1640,10 +1796,16 @@ function setupEvents() {
                         OC: o.ocNumero,
                         Cotizacion_Ref: o.cotizacionRef,
                         Cliente: o.clienteNombre,
-                        Bodega: o.bodegaAsignada,
+                        Dia: o.diaSemana,
+                        Ventana_Anden: o.ventanaAnden,
+                        Ruta: o.bodegaAsignada,
                         Entrega: o.fechaEntregaCompromiso,
                         Estado: o.estado
                     }))
+                },
+                {
+                    name: '4_Benchmark_CENADA',
+                    data: appState.cenadaList
                 }
             ], 'Reporte_Corporativo_Interfrutd_Pricing_Comercial.xlsx');
         });

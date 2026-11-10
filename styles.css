@@ -911,10 +911,57 @@ body {
     gap: 10px;
 }
 
+.otif-grid.otif-row-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+    .otif-grid.otif-row-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 640px) {
-    .otif-grid {
+    .otif-grid,
+    .otif-grid.otif-row-4 {
         grid-template-columns: 1fr;
     }
+}
+
+/* Interactive Day Pills (L M K J V S) */
+.day-pills-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.day-pill-btn {
+    width: 26px;
+    height: 24px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-app);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.14s ease;
+}
+
+.day-pill-btn:hover {
+    border-color: var(--brand-green-light);
+    color: var(--text-main);
+}
+
+.day-pill-btn.active {
+    background: var(--brand-green);
+    border-color: var(--brand-green-light);
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(46, 139, 87, 0.35);
 }
 
 .otif-card {
