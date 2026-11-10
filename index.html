@@ -83,7 +83,7 @@
 
                 <button type="button" class="module-tab-btn" data-tab="ordenes" role="tab" aria-selected="false">
                     <i class="fa-solid fa-truck-fast"></i>
-                    <span>3. Órdenes de Compra & Inventarios</span>
+                    <span>3. Órdenes Contra Pedido (OTIF)</span>
                     <span class="tab-counter" id="badgeCountOC">5</span>
                 </button>
             </div>
@@ -116,22 +116,15 @@
         <section id="panel-pricing" class="tab-panel active" role="tabpanel">
             <div class="kpi-grid" id="pricingKpiGrid"></div>
 
-            <!-- Panel de Configuración de Márgenes por Tipo de Cadena -->
-            <div class="chain-margin-panel" id="chainMarginPanel">
-                <div class="chain-margin-header">
-                    <div class="chain-margin-title">
-                        <i class="fa-solid fa-sliders"></i>
-                        <span>Política de Márgenes por Tipo de Cadena</span>
-                    </div>
-                    <span class="chain-margin-hint">Modifica el margen de cualquier canal para recalcular automáticamente las listas de los 211 productos</span>
+            <!-- Barra Compacta de Márgenes por Canal (1 sola línea ejecutiva) -->
+            <div class="chain-margin-panel compact-bar" id="chainMarginPanel">
+                <div class="chain-bar-label">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Márgenes Meta por Canal:</span>
                 </div>
-                <div class="chain-grid">
-                    <!-- 1. Supermercados -->
-                    <div class="chain-card">
-                        <div class="chain-card-top">
-                            <span class="chain-card-name"><i class="fa-solid fa-store"></i> Cadenas Supermercados</span>
-                            <span class="chain-card-badge">AutoMercado / Walmart</span>
-                        </div>
+                <div class="chain-grid compact-grid">
+                    <div class="chain-card compact-item">
+                        <span class="chain-card-name"><i class="fa-solid fa-store"></i> Supermercados</span>
                         <div class="chain-control-wrap">
                             <input type="range" class="chain-range" id="rangeMarginSupermercado" min="10" max="45" step="1" value="24">
                             <div class="chain-val-wrap">
@@ -141,12 +134,8 @@
                         </div>
                     </div>
 
-                    <!-- 2. HORECA -->
-                    <div class="chain-card">
-                        <div class="chain-card-top">
-                            <span class="chain-card-name"><i class="fa-solid fa-hotel"></i> HORECA / Food Service</span>
-                            <span class="chain-card-badge">Hoteles / Restaurantes</span>
-                        </div>
+                    <div class="chain-card compact-item">
+                        <span class="chain-card-name"><i class="fa-solid fa-hotel"></i> HORECA</span>
                         <div class="chain-control-wrap">
                             <input type="range" class="chain-range" id="rangeMarginHoreca" min="15" max="50" step="1" value="28">
                             <div class="chain-val-wrap">
@@ -156,12 +145,8 @@
                         </div>
                     </div>
 
-                    <!-- 3. Mayoristas -->
-                    <div class="chain-card">
-                        <div class="chain-card-top">
-                            <span class="chain-card-name"><i class="fa-solid fa-truck-moving"></i> Mayoristas / CEDI</span>
-                            <span class="chain-card-badge">CENADA / Ruteo</span>
-                        </div>
+                    <div class="chain-card compact-item">
+                        <span class="chain-card-name"><i class="fa-solid fa-truck-moving"></i> Mayoristas</span>
                         <div class="chain-control-wrap">
                             <input type="range" class="chain-range" id="rangeMarginMayorista" min="8" max="35" step="1" value="18">
                             <div class="chain-val-wrap">
@@ -171,12 +156,8 @@
                         </div>
                     </div>
 
-                    <!-- 4. Detalle / Retail -->
-                    <div class="chain-card">
-                        <div class="chain-card-top">
-                            <span class="chain-card-name"><i class="fa-solid fa-shop"></i> Puntos de Venta / Detalle</span>
-                            <span class="chain-card-badge">Venta Directa</span>
-                        </div>
+                    <div class="chain-card compact-item">
+                        <span class="chain-card-name"><i class="fa-solid fa-shop"></i> Detalle</span>
                         <div class="chain-control-wrap">
                             <input type="range" class="chain-range" id="rangeMarginDetalle" min="15" max="55" step="1" value="32">
                             <div class="chain-val-wrap">
@@ -189,66 +170,40 @@
             </div>
 
             <div class="section-card">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fa-solid fa-scale-balanced"></i>
-                        <span>Listas de Precios por Canal y Benchmark de Mercado</span>
+                <div class="section-header" id="pricingControlsBar">
+                    <div class="filter-group" id="pricingQuickChips">
+                        <button type="button" class="chip-btn active" data-pfilter="ALL">Todos (211)</button>
+                        <button type="button" class="chip-btn" data-pfilter="MARGEN_CRITICO"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i> Margen Crítico (&lt;16%)</button>
+                        <button type="button" class="chip-btn" data-pfilter="COSTO_SUBIO"><i class="fa-solid fa-arrow-trend-up" style="color:var(--warning);"></i> Costo Subió</button>
+                        <button type="button" class="chip-btn" data-pfilter="OPORTUNIDAD_PRECIO"><i class="fa-solid fa-circle-up" style="color:var(--success);"></i> Oportunidad Alza</button>
                     </div>
+
                     <div class="filter-group">
                         <button type="button" class="btn btn-secondary btn-sm" id="btnSwitchMatrixView" data-view="catalog">
-                            <i class="fa-solid fa-warehouse"></i> Comparativo CENADA (39)
+                            <i class="fa-solid fa-warehouse"></i> Benchmark CENADA (39)
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnApplySuggestedPrices" title="Aplicar el precio sugerido según margen meta a los productos con margen crítico">
-                            <i class="fa-solid fa-sliders" style="color:var(--brand-green);"></i> Optimizar Margen Mínimo
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnApplySuggestedPrices" title="Ajustar automáticamente los productos con margen menor a 16%">
+                            <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--brand-green-light);"></i> Nivelar Críticos
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" id="btnExportPricingExcel">
-                            <i class="fa-solid fa-file-excel"></i> Exportar Lista (.xlsx)
+                            <i class="fa-solid fa-file-excel"></i> Exportar (.xlsx)
                         </button>
                     </div>
                 </div>
 
-                <!-- Controles de Lista de Precios y Filtros de Diagnóstico -->
-                <div class="toolbar-row" id="pricingControlsBar">
-                    <div class="filter-group">
-                        <label style="font-size:12px; font-weight:700; color:var(--text-secondary);">Ver Canal:</label>
-                        <select id="selectPriceListChannel" class="select-control" style="font-weight:700;">
-                            <option value="ALL">Matriz Completa (Todos los Canales + Supermercados)</option>
-                            <option value="SUPERMERCADO">Canal Supermercados / Cadenas</option>
-                            <option value="HORECA">Canal HORECA / Food Service</option>
-                            <option value="MAYORISTA">Canal Mayorista / CEDI</option>
-                            <option value="DETALLE">Canal Detalle / Punto de Venta</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-group" id="pricingQuickChips">
-                        <button type="button" class="chip-btn active" data-pfilter="ALL">Todos</button>
-                        <button type="button" class="chip-btn" data-pfilter="MARGEN_CRITICO"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i> Margen Crítico (&lt;16%)</button>
-                        <button type="button" class="chip-btn" data-pfilter="COSTO_SUBIO"><i class="fa-solid fa-arrow-trend-up" style="color:var(--warning);"></i> Costo de Compra Subió</button>
-                        <button type="button" class="chip-btn" data-pfilter="OPORTUNIDAD_PRECIO"><i class="fa-solid fa-circle-up" style="color:var(--success);"></i> Oportunidad de Alza</button>
-                        <button type="button" class="chip-btn" data-pfilter="CON_BENCHMARK"><i class="fa-solid fa-store" style="color:var(--info);"></i> Con Benchmark Supermercados</button>
-                    </div>
-                </div>
-
-                <!-- Tabla Principal de Pricing & Listas -->
+                <!-- Tabla Principal de Pricing Simplificada (8 Columnas Clave) -->
                 <div id="pricingCatalogContainer" class="table-scroll">
                     <table class="data-table" id="pricingMainTable">
                         <thead>
                             <tr>
-                                <th>SKU</th>
-                                <th>Producto / Presentación</th>
-                                <th>Categoría</th>
-                                <th class="center-col">ABC</th>
-                                <th class="num-col" title="Costo directo de adquisición / Cost of Goods Sold">Costo Compra (COGS)</th>
-                                <th class="num-col" title="Variación reciente del costo de compra">Var. Costo</th>
-                                <th class="num-col">Mayorista</th>
-                                <th class="num-col">Supermercado</th>
+                                <th>SKU · ABC</th>
+                                <th>Producto & Empaque</th>
+                                <th class="num-col" title="Costo directo de compra (COGS)">Costo (COGS)</th>
+                                <th class="num-col">Supermercados</th>
                                 <th class="num-col">HORECA</th>
-                                <th class="num-col">Detalle (Editable)</th>
-                                <th class="num-col">Margen Real</th>
-                                <th class="num-col">Sugerido</th>
-                                <th class="num-col">Mín. Superm.</th>
-                                <th>Estado</th>
-                                <th class="center-col">Cotizar</th>
+                                <th class="num-col">Mayorista</th>
+                                <th class="num-col">Precio Detalle & Margen</th>
+                                <th class="center-col">Estado / Cotizar</th>
                             </tr>
                         </thead>
                         <tbody id="pricingTableBody"></tbody>
@@ -260,16 +215,13 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Cód. Interfrutd</th>
-                                <th>Producto Mayorista (Planta / CEDI)</th>
+                                <th>Cód.</th>
+                                <th>Producto Interfrutd</th>
                                 <th>Presentación</th>
-                                <th class="num-col">Precio Interfrutd (c/IVA)</th>
+                                <th class="num-col">Precio Interfrutd</th>
                                 <th>Referencia PIMA CENADA</th>
-                                <th class="num-col">CENADA Mín</th>
                                 <th class="num-col">CENADA Moda</th>
-                                <th class="num-col">CENADA Promedio</th>
                                 <th class="num-col">Diferencia (₡)</th>
-                                <th class="num-col">Brecha vs Moda</th>
                                 <th>Posición Competitiva</th>
                             </tr>
                         </thead>
@@ -295,10 +247,10 @@
                         </div>
                         <div class="filter-group">
                             <button type="button" class="btn btn-secondary btn-sm" id="btnNewBlankQuote">
-                                <i class="fa-solid fa-plus"></i> Nueva Cotización
+                                <i class="fa-solid fa-plus"></i> Nueva
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm" id="btnPreviewQuotePdf">
-                                <i class="fa-solid fa-print"></i> Vista Previa / PDF
+                                <i class="fa-solid fa-print"></i> PDF
                             </button>
                             <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuote">
                                 <i class="fa-solid fa-floppy-disk"></i> Guardar
@@ -307,7 +259,7 @@
                     </div>
 
                     <!-- Datos de Cabecera del Cliente -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:10px; margin-bottom:14px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:12px;">
                         <div>
                             <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Cliente Corporativo</label>
                             <select id="quoteClientSelect" class="select-control" style="width:100%;"></select>
@@ -326,40 +278,36 @@
                             <input type="date" id="quoteValidUntil" class="input-control" style="width:100%;" value="2026-11-08">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Descuento Global (%)</label>
+                            <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">Desc. Global (%)</label>
                             <div style="display:flex; gap:6px;">
                                 <input type="number" id="quoteGlobalDiscount" class="input-control" style="width:100%;" min="0" max="25" step="0.5" value="3">
-                                <button type="button" class="btn btn-secondary btn-sm" id="btnApplyGlobalDiscount" title="Aplicar descuento a todas las líneas">Aplicar</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnApplyGlobalDiscount">Aplicar</button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Buscador para Agregar Producto a la Cotización -->
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; background:var(--bg-elevated); padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:14px;">
-                        <select id="quoteAddSkuSelect" class="select-control" style="flex:1; min-width:240px;"></select>
-                        <input type="number" id="quoteAddQtyInput" class="input-control" style="width:95px;" min="1" value="50" placeholder="Cant.">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; background:var(--bg-elevated); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:12px;">
+                        <select id="quoteAddSkuSelect" class="select-control" style="flex:1; min-width:220px;"></select>
+                        <input type="number" id="quoteAddQtyInput" class="input-control" style="width:88px;" min="1" value="50" placeholder="Cant.">
                         <button type="button" class="btn btn-primary btn-sm" id="btnAddQuoteLine">
-                            <i class="fa-solid fa-cart-plus"></i> Agregar Línea
+                            <i class="fa-solid fa-cart-plus"></i> Agregar
                         </button>
                     </div>
 
-                    <!-- Tabla de Líneas de la Cotización -->
-                    <div class="table-scroll" style="max-height:360px;">
+                    <!-- Tabla de Líneas de la Cotización Simplificada (8 Columnas) -->
+                    <div class="table-scroll" style="max-height:340px;">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>SKU</th>
-                                    <th>Producto</th>
-                                    <th class="center-col">Und</th>
-                                    <th class="num-col">Stock</th>
-                                    <th class="num-col">Cantidad</th>
-                                    <th class="num-col">Costo</th>
-                                    <th class="num-col">Precio Lista</th>
+                                    <th>Producto (Empaque)</th>
+                                    <th class="num-col">Cant.</th>
+                                    <th class="num-col">Costo (COGS)</th>
                                     <th class="num-col">Desc %</th>
-                                    <th class="num-col">Precio Ofertado</th>
+                                    <th class="num-col">Precio Neto</th>
                                     <th class="num-col">Subtotal (₡)</th>
-                                    <th class="num-col">Margen %</th>
-                                    <th class="center-col">Quitar</th>
+                                    <th class="center-col">Margen / Quitar</th>
                                 </tr>
                             </thead>
                             <tbody id="quoteLinesTableBody"></tbody>
@@ -367,8 +315,8 @@
                     </div>
 
                     <!-- Notas y Resumen Financiero de la Cotización -->
-                    <div style="margin-top:12px;">
-                        <input type="text" id="quoteNotesInput" class="input-control" style="width:100%; margin-bottom:12px;" placeholder="Condiciones de entrega, ventana horaria o notas comerciales...">
+                    <div style="margin-top:10px;">
+                        <input type="text" id="quoteNotesInput" class="input-control" style="width:100%; margin-bottom:8px;" placeholder="Condiciones de entrega contra pedido o ventana horaria...">
                         <div class="excel-status-bar" id="quoteFinancialSummaryBar"></div>
                     </div>
                 </div>
@@ -378,39 +326,37 @@
                     <div class="section-header">
                         <div class="section-title">
                             <i class="fa-solid fa-folder-open"></i>
-                            <span>Cartera de Cotizaciones</span>
+                            <span>Cartera Activa</span>
                         </div>
                         <button type="button" class="btn btn-secondary btn-sm" id="btnExportQuotesExcel">
-                            <i class="fa-solid fa-file-excel"></i> Exportar Cartera
+                            <i class="fa-solid fa-file-excel"></i> Exportar
                         </button>
                     </div>
 
-                    <div id="savedQuotesListContainer" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    <div id="savedQuotesListContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
                 </div>
             </div>
         </section>
 
         <!-- ============================================================== -->
-        <!-- MÓDULO 3: ÓRDENES DE COMPRA (OC), VENTAS, INVENTARIOS Y ABC     -->
+        <!-- MÓDULO 3: ÓRDENES CONTRA PEDIDO (OTIF & FILL RATE)              -->
         <!-- ============================================================== -->
         <section id="panel-ordenes" class="tab-panel" role="tabpanel">
             <div class="kpi-grid" id="ordersKpiGrid"></div>
 
-            <!-- Monitor de Nivel de Servicio OTIF & Fill Rate (Modelo Contra Pedido B2B) -->
-            <div class="otif-panel" id="otifServicePanel">
-                <div class="otif-header">
-                    <div class="otif-title">
-                        <i class="fa-solid fa-truck-ramp-box"></i>
-                        <span>Nivel de Servicio OTIF & Fill Rate (Modelo Contra Pedido B2B)</span>
+            <!-- Fila Ejecutiva: SLA por Canal (Izquierda) + Gráfico Ventas y Margen por Categoría (Derecha) -->
+            <div class="split-grid-2" style="margin-bottom: 16px;">
+                <div class="section-card" id="otifServicePanel" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa-solid fa-truck-ramp-box"></i>
+                            <span>Cumplimiento SLA por Canal (Contra Pedido)</span>
+                        </div>
+                        <span class="badge badge-success">Cero Merma en Bodega</span>
                     </div>
-                    <span class="otif-hint">Auditoría de cumplimiento de SLA para Cadenas de Supermercados (≥98%) y HORECA (≥95%) sin inventario ocioso</span>
+                    <div class="otif-grid compact-otif-grid" id="otifChannelGrid"></div>
                 </div>
-                <div class="otif-grid" id="otifChannelGrid"></div>
-                <div class="otif-financial-strip" id="otifFinancialStrip"></div>
-            </div>
 
-            <!-- Gráficos de Ventas, Margen por Categoría y Pareto ABC -->
-            <div class="charts-grid-2">
                 <div class="section-card" style="margin-bottom:0;">
                     <div class="section-header">
                         <div class="section-title">
@@ -418,25 +364,13 @@
                             <span>Ventas Mensuales vs Margen (%) por Categoría</span>
                         </div>
                     </div>
-                    <div style="height:260px; position:relative;">
+                    <div style="height:230px; position:relative;">
                         <canvas id="chartCategorySalesMargin"></canvas>
-                    </div>
-                </div>
-
-                <div class="section-card" style="margin-bottom:0;">
-                    <div class="section-header">
-                        <div class="section-title">
-                            <i class="fa-solid fa-chart-pie"></i>
-                            <span>Estructura de Inventario & Pareto ABC</span>
-                        </div>
-                    </div>
-                    <div style="height:260px; position:relative;">
-                        <canvas id="chartAbcInventory"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Seguimiento de Órdenes de Compra (OC) y Nivel de Servicio (Fill Rate) -->
+            <!-- Seguimiento de Órdenes de Compra (OC) Simplificado (8 Columnas) -->
             <div class="section-card">
                 <div class="section-header">
                     <div class="section-title">
@@ -446,9 +380,7 @@
                     <div class="filter-group" id="ocStatusFilterGroup">
                         <button type="button" class="chip-btn active" data-ocfilter="ALL">Todas</button>
                         <button type="button" class="chip-btn" data-ocfilter="100_OTIF"><i class="fa-solid fa-check-double" style="color:var(--success);"></i> 100% OTIF</button>
-                        <button type="button" class="chip-btn" data-ocfilter="PARCIAL"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);"></i> Parcial (&lt;100%)</button>
-                        <button type="button" class="chip-btn" data-ocfilter="OC_RECIBIDA">Recibida</button>
-                        <button type="button" class="chip-btn" data-ocfilter="EN_ALISTAMIENTO">Alistamiento</button>
+                        <button type="button" class="chip-btn" data-ocfilter="PARCIAL"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);"></i> Entrega Parcial</button>
                         <button type="button" class="chip-btn" data-ocfilter="EN_RUTA">En Ruta</button>
                         <button type="button" class="chip-btn" data-ocfilter="ENTREGADA">Entregada</button>
                     </div>
@@ -458,63 +390,17 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>N° Orden</th>
-                                <th>Ref. Cotización</th>
-                                <th>Cliente Corporativo</th>
-                                <th>Bodega</th>
-                                <th>Fecha Compromiso</th>
-                                <th class="num-col">Pedidas</th>
-                                <th class="num-col">Despachadas</th>
-                                <th class="num-col">Fill Rate</th>
-                                <th class="center-col">SLA Canal</th>
-                                <th class="num-col">Monto OC (₡)</th>
-                                <th class="num-col">Margen OC</th>
-                                <th>Flujo de Proceso</th>
+                                <th>N° Orden / Ref</th>
+                                <th>Cliente & Canal</th>
+                                <th>Compromiso</th>
+                                <th class="num-col">Despachado / Pedido</th>
+                                <th class="center-col">Fill Rate & SLA</th>
+                                <th class="num-col">Facturado & Margen</th>
+                                <th>Estado de Despacho</th>
                                 <th class="center-col">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="purchaseOrdersTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Control de Inventario, Rotación, Cobertura y Punto de Reorden -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fa-solid fa-boxes-stacked"></i>
-                        <span>Inventarios, Días de Cobertura y Clasificación ABC</span>
-                    </div>
-                    <div class="filter-group">
-                        <button type="button" class="chip-btn active" data-invfilter="ALL">Todo</button>
-                        <button type="button" class="chip-btn" data-invfilter="REORDEN"><i class="fa-solid fa-bell" style="color:var(--danger);"></i> Reorden (&le;5 días)</button>
-                        <button type="button" class="chip-btn" data-invfilter="SOBRESTOCK"><i class="fa-solid fa-box-archive" style="color:var(--warning);"></i> Sobre-Stock (&gt;25 días)</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnExportInventoryExcel">
-                            <i class="fa-solid fa-file-excel"></i> Exportar Inventario (.xlsx)
-                        </button>
-                    </div>
-                </div>
-
-                <div class="table-scroll">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>SKU</th>
-                                <th>Producto</th>
-                                <th>Categoría</th>
-                                <th class="center-col">Clase ABC</th>
-                                <th class="num-col">CEDI 400</th>
-                                <th class="num-col">Bodega 401</th>
-                                <th class="num-col">Ruta 402</th>
-                                <th class="num-col">Stock Total</th>
-                                <th class="num-col">Venta Mensual</th>
-                                <th class="num-col">Ingreso Mensual</th>
-                                <th class="num-col">Días Cobertura</th>
-                                <th class="num-col">Punto Reorden</th>
-                                <th>Abastecimiento</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventoryAbcTableBody"></tbody>
                     </table>
                 </div>
             </div>

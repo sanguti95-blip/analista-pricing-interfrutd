@@ -238,16 +238,16 @@ function renderPricingModule() {
     // Si estamos en vista PIMA CENADA
     const catalogCont = document.getElementById('pricingCatalogContainer');
     const cenadaCont = document.getElementById('cenadaComparisonContainer');
-    const controlsBar = document.getElementById('pricingControlsBar');
+    const quickChips = document.getElementById('pricingQuickChips');
     if (appState.pricingView === 'cenada') {
         if (catalogCont) catalogCont.style.display = 'none';
-        if (controlsBar) controlsBar.style.display = 'none';
+        if (quickChips) quickChips.style.visibility = 'hidden';
         if (cenadaCont) cenadaCont.style.display = 'block';
         renderCenadaComparisonTable();
         return;
     } else {
         if (catalogCont) catalogCont.style.display = 'block';
-        if (controlsBar) controlsBar.style.display = 'flex';
+        if (quickChips) quickChips.style.visibility = 'visible';
         if (cenadaCont) cenadaCont.style.display = 'none';
     }
 
@@ -263,14 +263,13 @@ function renderPricingModule() {
     const tbody = document.getElementById('pricingTableBody');
     if (!tbody) return;
 
-    const ch = appState.activePriceListChannel;
-
     tbody.innerHTML = rows.map(item => {
-        const varBadge = item.varCostoPct > 0
-            ? `<span class="badge ${item.varCostoPct >= 6 ? 'badge-danger' : 'badge-warning'}">+${formatPct(item.varCostoPct, 1)}</span>`
+        const costVal = item.costoReposicion > 0 ? item.costoReposicion : item.costoActual;
+        const varInline = item.varCostoPct >= 6
+            ? `<span class="badge badge-danger" style="margin-left:5px; font-size:10px;">+${formatPct(item.varCostoPct, 0)}</span>`
             : (item.varCostoPct < 0
-                ? `<span class="badge badge-success">${formatPct(item.varCostoPct, 1)}</span>`
-                : `<span class="badge badge-neutral">0.0%</span>`);
+                ? `<span class="badge badge-success" style="margin-left:5px; font-size:10px;">${formatPct(item.varCostoPct, 0)}</span>`
+                : '');
 
         let marginBadgeClass = 'badge-success';
         if (item.margenReposicionPct < 16) marginBadgeClass = 'badge-danger';
@@ -278,48 +277,51 @@ function renderPricingModule() {
 
         let diagHtml = `<span class="badge badge-success"><i class="fa-solid fa-check"></i> Óptimo</span>`;
         if (item.estadoPrecio === 'MARGEN_CRITICO') {
-            diagHtml = `<span class="badge badge-danger"><i class="fa-solid fa-bolt"></i> Margen Crítico</span>`;
+            diagHtml = `<span class="badge badge-danger"><i class="fa-solid fa-bolt"></i> Crítico</span>`;
         } else if (item.estadoPrecio === 'COSTO_SUBIO') {
-            diagHtml = `<span class="badge badge-warning"><i class="fa-solid fa-arrow-trend-up"></i> Costo Subió</span>`;
+            diagHtml = `<span class="badge badge-warning"><i class="fa-solid fa-arrow-trend-up"></i> Alza Costo</span>`;
         } else if (item.estadoPrecio === 'OPORTUNIDAD_PRECIO') {
-            diagHtml = `<span class="badge badge-info"><i class="fa-solid fa-circle-up"></i> Oportunidad Alza</span>`;
+            diagHtml = `<span class="badge badge-info"><i class="fa-solid fa-circle-up"></i> Oportunidad</span>`;
         } else if (item.estadoPrecio === 'CARO_VS_COMPETENCIA') {
-            diagHtml = `<span class="badge badge-warning"><i class="fa-solid fa-scale-unbalanced"></i> Sobre Competencia</span>`;
+            diagHtml = `<span class="badge badge-warning">Sobre Mkt</span>`;
         }
 
-        const benchHtml = item.precioCompetenciaMin > 0
-            ? `<div title="AutoMercado: ${formatCRC(item.precioAutoMercado)} | Walmart: ${formatCRC(item.precioWalmart)} | MásxMenos: ${formatCRC(item.precioMasxMenos)}">
-                 <strong>${formatCRC(item.precioCompetenciaMin)}</strong>
-               </div>`
-            : `<span style="color:var(--text-muted);">—</span>`;
-
-        const highlightStyle = (colName) => (ch === colName ? 'background: rgba(77,184,72,0.13); font-weight:800;' : '');
+        const superHint = item.precioCompetenciaMin > 0
+            ? `<div style="font-size:10.5px; color:var(--text-muted);" title="Ref. Mín. Supermercados: ${formatCRC(item.precioCompetenciaMin)}">Ref: ${formatCRC(item.precioCompetenciaMin)}</div>`
+            : '';
 
         return `
             <tr>
-                <td><code style="font-weight:700; color:var(--brand-green);">${escapeHtml(item.sku)}</code></td>
+                <td style="white-space:nowrap;">
+                    <code style="font-weight:700; color:var(--brand-green); margin-right:6px;">${escapeHtml(item.sku)}</code>
+                    <span class="abc-badge abc-${item.abcClass}">${item.abcClass}</span>
+                </td>
                 <td>
                     <div style="font-weight:700;">${escapeHtml(item.name)}</div>
-                    <div style="font-size:11px; color:var(--text-muted);">Empaque: ${item.unidad} (x${item.factorEmpaque}) · Stock: ${formatNum(item.stockTotal)}</div>
+                    <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(item.categoria)} · ${escapeHtml(item.unidad)} (x${item.factorEmpaque})</div>
                 </td>
-                <td><span class="badge badge-neutral">${escapeHtml(item.categoria)}</span></td>
-                <td class="center-col"><span class="abc-badge abc-${item.abcClass}">${item.abcClass}</span></td>
-                <td class="num-col" style="font-weight:700;" title="Costo directo de adquisición / Cost of Goods Sold">${formatCRC(item.costoReposicion > 0 ? item.costoReposicion : item.costoActual)}</td>
-                <td class="num-col">${varBadge}</td>
-                <td class="num-col" style="${highlightStyle('MAYORISTA')}">${formatCRC(item.precioMayorista)}</td>
-                <td class="num-col" style="${highlightStyle('SUPERMERCADO')}">${formatCRC(item.precioSupermercado)}</td>
-                <td class="num-col" style="${highlightStyle('HORECA')}">${formatCRC(item.precioHoreca)}</td>
-                <td class="num-col" style="${highlightStyle('DETALLE')}">
-                    <input type="number" class="inline-price-input" data-sku="${escapeHtml(item.sku)}" value="${item.precioDetalle}" min="5" step="5">
+                <td class="num-col" style="font-weight:700; white-space:nowrap;">
+                    ${formatCRC(costVal)}${varInline}
                 </td>
-                <td class="num-col"><span class="badge ${marginBadgeClass}">${formatPct(item.margenReposicionPct, 1)}</span></td>
-                <td class="num-col" style="font-weight:700; color:var(--brand-lime);">${formatCRC(item.precioSugeridoMeta)}</td>
-                <td class="num-col">${benchHtml}</td>
-                <td>${diagHtml}</td>
-                <td class="center-col">
-                    <button type="button" class="btn btn-secondary btn-sm btn-quick-quote" data-sku="${escapeHtml(item.sku)}" title="Enviar a Cotización B2B">
-                        <i class="fa-solid fa-file-circle-plus"></i>
-                    </button>
+                <td class="num-col">
+                    <div style="font-weight:700;">${formatCRC(item.precioSupermercado)}</div>
+                    ${superHint}
+                </td>
+                <td class="num-col" style="font-weight:700;">${formatCRC(item.precioHoreca)}</td>
+                <td class="num-col" style="color:var(--text-secondary);">${formatCRC(item.precioMayorista)}</td>
+                <td class="num-col" style="white-space:nowrap;">
+                    <div style="display:inline-flex; align-items:center; gap:6px;">
+                        <input type="number" class="inline-price-input" data-sku="${escapeHtml(item.sku)}" value="${item.precioDetalle}" min="5" step="5">
+                        <span class="badge ${marginBadgeClass}">${formatPct(item.margenReposicionPct, 1)}</span>
+                    </div>
+                </td>
+                <td class="center-col" style="white-space:nowrap;">
+                    <div style="display:inline-flex; align-items:center; gap:6px;">
+                        ${diagHtml}
+                        <button type="button" class="btn btn-secondary btn-sm btn-quick-quote" data-sku="${escapeHtml(item.sku)}" title="Agregar a Cotización B2B">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -341,9 +343,9 @@ function renderCenadaComparisonTable() {
     tbody.innerHTML = filtered.map(r => {
         const diff = Number(r.diffColones) || 0;
         const pct = Number(r.pctDiffModa) || 0;
-        let badge = `<span class="badge badge-info">Alineado al Mercado</span>`;
-        if (pct <= -5) badge = `<span class="badge badge-success"><i class="fa-solid fa-trophy"></i> Ventaja Competitiva (${formatPct(pct, 1)})</span>`;
-        else if (pct >= 8) badge = `<span class="badge badge-warning"><i class="fa-solid fa-triangle-exclamation"></i> Sobre Moda CENADA (+${formatPct(pct, 1)})</span>`;
+        let badge = `<span class="badge badge-info">Alineado</span>`;
+        if (pct <= -5) badge = `<span class="badge badge-success"><i class="fa-solid fa-trophy"></i> Ventaja (${formatPct(pct, 1)})</span>`;
+        else if (pct >= 8) badge = `<span class="badge badge-warning">Sobre Moda (+${formatPct(pct, 1)})</span>`;
 
         return `
             <tr>
@@ -352,13 +354,10 @@ function renderCenadaComparisonTable() {
                 <td><span class="badge badge-neutral">${escapeHtml(r.frumusaUnit)}</span></td>
                 <td class="num-col" style="font-weight:800;">${formatCRC(r.frumusaPrecioIva)}</td>
                 <td>${escapeHtml(r.cenadaName)}</td>
-                <td class="num-col">${formatCRC(r.cenadaMin)}</td>
                 <td class="num-col" style="font-weight:700;">${formatCRC(r.cenadaModa)}</td>
-                <td class="num-col">${formatCRC(r.cenadaAvg)}</td>
                 <td class="num-col" style="color:${diff <= 0 ? 'var(--success)' : 'var(--warning)'}; font-weight:700;">
                     ${diff > 0 ? '+' : ''}${formatCRC(diff)}
                 </td>
-                <td class="num-col">${pct > 0 ? '+' : ''}${formatPct(pct, 1)}</td>
                 <td>${badge}</td>
             </tr>
         `;
@@ -380,7 +379,7 @@ function populateQuoteSelectors() {
     if (skuSel && skuSel.options.length === 0) {
         const sorted = [...appState.catalog].sort((a, b) => a.name.localeCompare(b.name));
         skuSel.innerHTML = sorted.map(item =>
-            `<option value="${escapeHtml(item.sku)}">[${escapeHtml(item.sku)}] ${escapeHtml(item.name)} — HORECA: ${formatCRC(item.precioHoreca)} | Stock: ${formatNum(item.stockTotal)}</option>`
+            `<option value="${escapeHtml(item.sku)}">[${escapeHtml(item.sku)}] ${escapeHtml(item.name)} (${escapeHtml(item.unidad)}) — HORECA: ${formatCRC(item.precioHoreca)}</option>`
         ).join('');
     }
 }
@@ -398,7 +397,7 @@ function renderQuotesModule() {
 
     const draft = appState.activeQuoteDraft;
     const titleEl = document.getElementById('quoteBuilderTitle');
-    if (titleEl) titleEl.textContent = `Constructor de Cotización Comercial (${draft.id})`;
+    if (titleEl) titleEl.textContent = `Cotizador Comercial B2B (${draft.id})`;
 
     const clientSel = document.getElementById('quoteClientSelect');
     if (clientSel) clientSel.value = draft.clienteId;
@@ -412,15 +411,13 @@ function renderQuotesModule() {
     const notesIn = document.getElementById('quoteNotesInput');
     if (notesIn) notesIn.value = draft.notas || '';
 
-    // Calcular totales de la cotización en edición
+    // Calcular totales de la cotización en edición (8 columnas limpias, modelo contra pedido)
     let draftRevenue = 0;
     let draftCost = 0;
     const tbody = document.getElementById('quoteLinesTableBody');
 
     if (tbody) {
         tbody.innerHTML = draft.items.map((line, idx) => {
-            const catItem = appState.catalog.find(x => x.sku === line.sku);
-            const stockDisp = catItem ? catItem.stockTotal : 100;
             const precioFinal = Math.round(line.precioLista * (1 - (Number(line.descuentoPct) || 0) / 100));
             line.precioFinal = precioFinal;
             const subtotal = line.cantidad * precioFinal;
@@ -428,34 +425,31 @@ function renderQuotesModule() {
             draftRevenue += subtotal;
             draftCost += subtotalCost;
             const lineMarginPct = precioFinal > 0 ? ((precioFinal - line.costoUnit) / precioFinal) * 100 : 0;
-
-            const stockBadge = line.cantidad > stockDisp
-                ? `<span class="badge badge-danger" title="Supera stock inmediato">${formatNum(stockDisp)} ⚠️</span>`
-                : `<span class="badge badge-success">${formatNum(stockDisp)}</span>`;
-
             const marginClass = lineMarginPct < 16 ? 'badge-danger' : (lineMarginPct < 22 ? 'badge-warning' : 'badge-success');
 
             return `
                 <tr>
                     <td><code style="font-weight:700; color:var(--brand-green);">${escapeHtml(line.sku)}</code></td>
-                    <td style="font-weight:600;">${escapeHtml(line.name)}</td>
-                    <td class="center-col">${escapeHtml(line.unidad)}</td>
-                    <td class="num-col">${stockBadge}</td>
+                    <td>
+                        <div style="font-weight:600;">${escapeHtml(line.name)}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">Und: ${escapeHtml(line.unidad)} · Lista: ${formatCRC(line.precioLista)}</div>
+                    </td>
                     <td class="num-col">
-                        <input type="number" class="inline-price-input quote-line-qty" data-idx="${idx}" value="${line.cantidad}" min="1" style="width:72px;">
+                        <input type="number" class="inline-price-input quote-line-qty" data-idx="${idx}" value="${line.cantidad}" min="1" style="width:68px;">
                     </td>
                     <td class="num-col">${formatCRC(line.costoUnit)}</td>
-                    <td class="num-col">${formatCRC(line.precioLista)}</td>
                     <td class="num-col">
-                        <input type="number" class="inline-price-input quote-line-disc" data-idx="${idx}" value="${line.descuentoPct}" min="0" max="35" step="0.5" style="width:64px;">
+                        <input type="number" class="inline-price-input quote-line-disc" data-idx="${idx}" value="${line.descuentoPct}" min="0" max="35" step="0.5" style="width:60px;">
                     </td>
                     <td class="num-col" style="font-weight:800;">${formatCRC(precioFinal)}</td>
                     <td class="num-col" style="font-weight:700;">${formatCRC(subtotal)}</td>
-                    <td class="num-col"><span class="badge ${marginClass}">${formatPct(lineMarginPct, 1)}</span></td>
-                    <td class="center-col">
-                        <button type="button" class="btn btn-danger btn-sm btn-remove-qline" data-idx="${idx}" title="Eliminar línea">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                    <td class="center-col" style="white-space:nowrap;">
+                        <div style="display:inline-flex; align-items:center; gap:6px;">
+                            <span class="badge ${marginClass}">${formatPct(lineMarginPct, 1)}</span>
+                            <button type="button" class="btn btn-danger btn-sm btn-remove-qline" data-idx="${idx}" title="Eliminar línea">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -756,20 +750,14 @@ function openOcDetailModal(oc) {
 
 function renderOrdersAndInventoryModule() {
     const baseCatalog = getFilteredCatalog();
-
-    // Cálculos de Ventas, Inventarios y ABC
     const totalMonthlySales = baseCatalog.reduce((s, x) => s + x.ventasMensualesCrc, 0);
-    const totalMonthlyUtil = baseCatalog.reduce((s, x) => s + x.utilidadMensualCrc, 0);
-    const totalInvValue = baseCatalog.reduce((s, x) => s + (x.stockTotal * x.costoActual), 0);
-    const lowCoverageCount = baseCatalog.filter(x => x.diasCobertura <= 5).length;
 
-    // Segmentos y SLAs para el Monitor OTIF (Operación Contra Pedido)
+    // 4 Canales Principales para el Monitor OTIF (Operación Contra Pedido)
     const channelSegments = [
-        { key: 'Supermercados', label: 'Cadenas Supermercados', icon: 'fa-store', sla: 98, hint: 'AutoMercado / Walmart' },
-        { key: 'HORECA Premium', label: 'HORECA Food Service', icon: 'fa-hotel', sla: 95, hint: 'Hoteles / Restaurantes' },
+        { key: 'Supermercados', label: 'Supermercados', icon: 'fa-store', sla: 98, hint: 'AutoMercado / Walmart' },
+        { key: 'HORECA Premium', label: 'HORECA Premium', icon: 'fa-hotel', sla: 95, hint: 'Hoteles / Restaurantes' },
         { key: 'Cadenas de Restaurantes', label: 'Cadenas Gastronómicas', icon: 'fa-utensils', sla: 95, hint: 'Rostipollos & Casual' },
-        { key: 'Institucional / Catering', label: 'Comedores / Catering', icon: 'fa-building-user', sla: 95, hint: 'Sodexo Zona Franca' },
-        { key: 'Mayorista / Ruteo', label: 'Mayoristas / CEDI', icon: 'fa-truck-moving', sla: 90, hint: 'CENADA / Ruteo' }
+        { key: 'Institucional / Catering', label: 'Comedores / Catering', icon: 'fa-building-user', sla: 95, hint: 'Sodexo Zona Franca' }
     ];
 
     const segStats = {};
@@ -802,56 +790,56 @@ function renderOrdersAndInventoryModule() {
         totalOcPedidoPotencial += ocPot;
         if (ocDesp >= ocPed && ocPed > 0) ocs100Count++;
 
-        const sKey = segStats[oc.segmento] ? oc.segmento : 'Mayorista / Ruteo';
-        segStats[sKey].pedidas += ocPed;
-        segStats[sKey].despachadas += ocDesp;
-        segStats[sKey].facturado += ocFact;
-        segStats[sKey].count += 1;
+        if (segStats[oc.segmento]) {
+            segStats[oc.segmento].pedidas += ocPed;
+            segStats[oc.segmento].despachadas += ocDesp;
+            segStats[oc.segmento].facturado += ocFact;
+            segStats[oc.segmento].count += 1;
+        }
     });
 
     const globalFillRatePct = totalOrderedUnits > 0 ? (totalDispatchedUnits / totalOrderedUnits) * 100 : 100;
     const lostSalesCrc = Math.max(0, totalOcPedidoPotencial - totalOcFacturado);
 
-    // 1. Grid Principal de KPIs
+    // 1. Grid Principal de 4 KPIs Ejecutivos
     const kpiGrid = document.getElementById('ordersKpiGrid');
     if (kpiGrid) {
         kpiGrid.innerHTML = `
             <div class="kpi-card">
-                <div class="kpi-header"><span>Facturación en OCs Contra Pedido</span><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                <div class="kpi-header"><span>Facturación Contra Pedido</span><i class="fa-solid fa-file-invoice-dollar"></i></div>
                 <div class="kpi-value">${formatCRC(totalOcFacturado)}</div>
                 <div class="kpi-sub">
                     <span class="badge badge-success">${appState.purchaseOrders.length} OCs Activas</span>
-                    <span>Proyección Mes: <strong>${formatCRC(totalMonthlySales)}</strong></span>
+                    <span>Mes: <strong>${formatCRC(totalMonthlySales)}</strong></span>
                 </div>
             </div>
             <div class="kpi-card ${globalFillRatePct >= 96 ? '' : 'kpi-warning'}">
-                <div class="kpi-header"><span>Nivel de Servicio Global (Fill Rate OTIF)</span><i class="fa-solid fa-truck-fast"></i></div>
+                <div class="kpi-header"><span>Nivel de Servicio (Fill Rate OTIF)</span><i class="fa-solid fa-truck-fast"></i></div>
                 <div class="kpi-value">${formatPct(globalFillRatePct, 1)}</div>
                 <div class="kpi-sub">
                     <span class="badge badge-success">${ocs100Count} de ${appState.purchaseOrders.length} al 100%</span>
-                    <span>${formatNum(totalDispatchedUnits)} de ${formatNum(totalOrderedUnits)} und</span>
+                    <span>${formatNum(totalDispatchedUnits)} / ${formatNum(totalOrderedUnits)} und</span>
                 </div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-header"><span>SLA Cadenas Supermercados</span><i class="fa-solid fa-store"></i></div>
                 <div class="kpi-value">${formatPct(segStats['Supermercados']?.pedidas > 0 ? (segStats['Supermercados'].despachadas / segStats['Supermercados'].pedidas) * 100 : 100, 1)}</div>
                 <div class="kpi-sub">
-                    <span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Meta &ge;98.0% Superada</span>
+                    <span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Meta &ge;98.0%</span>
                     <span>Sin penalizaciones</span>
                 </div>
             </div>
             <div class="kpi-card ${lostSalesCrc > 0 ? 'kpi-warning' : ''}">
-                <div class="kpi-header"><span>Venta No Realizada por Quiebre</span><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="kpi-header"><span>Venta No Facturada (Quiebre)</span><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <div class="kpi-value">${formatCRC(lostSalesCrc)}</div>
                 <div class="kpi-sub">
-                    <span>${formatPct(totalOcPedidoPotencial > 0 ? (lostSalesCrc / totalOcPedidoPotencial) * 100 : 0, 1)} de merma comercial</span>
                     <span>${formatNum(totalOrderedUnits - totalDispatchedUnits)} und faltantes</span>
                 </div>
             </div>
         `;
     }
 
-    // 2. Renderizar Monitor OTIF por Canal
+    // 2. Renderizar Monitor OTIF por Canal (4 tarjetas compactas 2x2)
     const otifGridEl = document.getElementById('otifChannelGrid');
     if (otifGridEl) {
         otifGridEl.innerHTML = channelSegments.map(c => {
@@ -869,7 +857,7 @@ function renderOrdersAndInventoryModule() {
                     <div class="otif-card-metric">
                         <div class="otif-val" style="color:${meets ? 'var(--text-main)' : 'var(--danger)'};">${formatPct(rate, 1)}</div>
                         <span class="badge ${meets ? 'badge-success' : 'badge-danger'}">
-                            ${meets ? '<i class="fa-solid fa-check"></i> Cumple SLA' : '<i class="fa-solid fa-triangle-exclamation"></i> En Riesgo'}
+                            ${meets ? 'Cumple' : 'Riesgo'}
                         </span>
                     </div>
                     <div class="otif-progress-wrap">
@@ -877,29 +865,17 @@ function renderOrdersAndInventoryModule() {
                     </div>
                     <div class="otif-card-footer">
                         <span>${c.hint}</span>
-                        <span>${stat.count} OC(s) · ${formatCRC(stat.facturado)}</span>
+                        <span>${formatCRC(stat.facturado)}</span>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    // 3. Renderizar Franja Financiera OTIF
-    const otifStripEl = document.getElementById('otifFinancialStrip');
-    if (otifStripEl) {
-        otifStripEl.innerHTML = `
-            <div class="otif-pill"><i class="fa-solid fa-clipboard-check" style="color:var(--brand-green-light);"></i> Demanda Solicitada: <strong>${formatNum(totalOrderedUnits)} und / cajas</strong></div>
-            <div class="otif-pill"><i class="fa-solid fa-truck-ramp-box" style="color:var(--brand-lime);"></i> Despachado en Andén: <strong>${formatNum(totalDispatchedUnits)} und / cajas</strong></div>
-            <div class="otif-pill"><i class="fa-solid fa-sack-dollar" style="color:var(--brand-green-light);"></i> Facturación Efectiva: <strong>${formatCRC(totalOcFacturado)}</strong></div>
-            <div class="otif-pill"><i class="fa-solid fa-scale-unbalanced" style="color:var(--warning);"></i> Brecha No Facturada: <strong>${formatCRC(lostSalesCrc)}</strong></div>
-            <div class="otif-pill"><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Modelo Contra Pedido 100% Activo</span></div>
-        `;
-    }
-
     const badgeOC = document.getElementById('badgeCountOC');
     if (badgeOC) badgeOC.textContent = String(appState.purchaseOrders.length);
 
-    // 4. Tabla de Seguimiento de Órdenes de Compra (OC)
+    // 3. Tabla Simplificada de Pipeline de Órdenes de Compra (8 Columnas Clave)
     const ocTbody = document.getElementById('purchaseOrdersTableBody');
     if (ocTbody) {
         const filteredOCs = appState.purchaseOrders.filter(oc => {
@@ -923,30 +899,29 @@ function renderOrdersAndInventoryModule() {
             const slaMeta = isSuper ? 98 : 95;
             const cumpleSla = fillRate >= slaMeta;
 
-            const slaBadge = cumpleSla
-                ? `<span class="badge badge-success"><i class="fa-solid fa-shield-check"></i> Cumple (&ge;${slaMeta}%)</span>`
-                : `<span class="badge badge-danger"><i class="fa-solid fa-triangle-exclamation"></i> Riesgo (&lt;${slaMeta}%)</span>`;
-
             return `
                 <tr>
-                    <td><code style="font-weight:800; color:var(--brand-lime);">${escapeHtml(oc.ocNumero)}</code></td>
-                    <td><span class="badge badge-neutral">${escapeHtml(oc.cotizacionRef)}</span></td>
+                    <td style="white-space:nowrap;">
+                        <code style="font-weight:800; color:var(--brand-lime);">${escapeHtml(oc.ocNumero)}</code>
+                        <div style="font-size:11px; color:var(--text-muted);">Ref: ${escapeHtml(oc.cotizacionRef)}</div>
+                    </td>
                     <td>
                         <div style="font-weight:700;">${escapeHtml(oc.clienteNombre)}</div>
                         <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(oc.segmento)} · ${oc.lineas.length} SKUs</div>
                     </td>
-                    <td>${escapeHtml(oc.bodegaAsignada)}</td>
-                    <td>${escapeHtml(oc.fechaEntregaCompromiso)}</td>
-                    <td class="num-col">${formatNum(pedida)}</td>
-                    <td class="num-col" style="font-weight:700;">${formatNum(desp)}</td>
-                    <td class="num-col">
-                        <span class="badge ${fillRate >= 98 ? 'badge-success' : (fillRate >= 95 ? 'badge-info' : 'badge-warning')}">
-                            ${formatPct(fillRate, 1)}
+                    <td style="white-space:nowrap;">${escapeHtml(oc.fechaEntregaCompromiso)}</td>
+                    <td class="num-col" style="white-space:nowrap;">
+                        <strong>${formatNum(desp)}</strong> <span style="color:var(--text-muted);">/ ${formatNum(pedida)} und</span>
+                    </td>
+                    <td class="center-col" style="white-space:nowrap;">
+                        <span class="badge ${cumpleSla ? 'badge-success' : 'badge-danger'}">
+                            ${formatPct(fillRate, 1)} · SLA &ge;${slaMeta}%
                         </span>
                     </td>
-                    <td class="center-col">${slaBadge}</td>
-                    <td class="num-col" style="font-weight:700;">${formatCRC(monto)}</td>
-                    <td class="num-col">${formatPct(margenOc, 1)}</td>
+                    <td class="num-col" style="white-space:nowrap;">
+                        <div style="font-weight:700;">${formatCRC(monto)}</div>
+                        <div style="font-size:11px; color:var(--brand-lime);">Margen: ${formatPct(margenOc, 1)}</div>
+                    </td>
                     <td>${renderOcStepper(oc.estado)}</td>
                     <td class="center-col" style="white-space:nowrap;">
                         <button type="button" class="btn btn-secondary btn-sm btn-view-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Auditar líneas de la orden">
@@ -956,45 +931,6 @@ function renderOrdersAndInventoryModule() {
                             <i class="fa-solid fa-forward-step"></i>
                         </button>
                     </td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    // Tabla de Inventarios, Cobertura y Clasificación ABC
-    const invTbody = document.getElementById('inventoryAbcTableBody');
-    if (invTbody) {
-        const invRows = baseCatalog.filter(item => {
-            if (appState.inventoryFilter === 'REORDEN') return item.diasCobertura <= 5;
-            if (appState.inventoryFilter === 'SOBRESTOCK') return item.diasCobertura > 25;
-            return true;
-        });
-
-        invTbody.innerHTML = invRows.slice(0, 120).map(item => {
-            let statusHtml = `<span class="badge badge-success">Cobertura Saludable</span>`;
-            if (item.diasCobertura <= 5) {
-                statusHtml = `<span class="badge badge-danger"><i class="fa-solid fa-bell"></i> Reorden Urgente (&le;5d)</span>`;
-            } else if (item.diasCobertura > 25) {
-                statusHtml = `<span class="badge badge-warning"><i class="fa-solid fa-box-archive"></i> Baja Rotación / Sobre-Stock</span>`;
-            }
-
-            return `
-                <tr>
-                    <td><code style="font-weight:700; color:var(--brand-green);">${escapeHtml(item.sku)}</code></td>
-                    <td style="font-weight:700;">${escapeHtml(item.name)}</td>
-                    <td><span class="badge badge-neutral">${escapeHtml(item.categoria)}</span></td>
-                    <td class="center-col"><span class="abc-badge abc-${item.abcClass}">${item.abcClass}</span></td>
-                    <td class="num-col">${formatNum(item.stockCedi)}</td>
-                    <td class="num-col">${formatNum(item.stockBodega401)}</td>
-                    <td class="num-col">${formatNum(item.stockRuta402)}</td>
-                    <td class="num-col" style="font-weight:800;">${formatNum(item.stockTotal)} ${escapeHtml(item.unidad)}</td>
-                    <td class="num-col">${formatNum(item.demandaMensualUnd)}</td>
-                    <td class="num-col" style="font-weight:700;">${formatCRC(item.ventasMensualesCrc)}</td>
-                    <td class="num-col" style="font-weight:700; color:${item.diasCobertura <= 5 ? 'var(--danger)' : 'var(--text-main)'};">
-                        ${formatNum(item.diasCobertura, 1)} días
-                    </td>
-                    <td class="num-col">${formatNum(item.puntoReorden)}</td>
-                    <td>${statusHtml}</td>
                 </tr>
             `;
         }).join('');
@@ -1010,11 +946,10 @@ function renderCommercialCharts(catalogList) {
     const byCat = {};
     catalogList.forEach(item => {
         if (!byCat[item.categoria]) {
-            byCat[item.categoria] = { sales: 0, profit: 0, invVal: 0 };
+            byCat[item.categoria] = { sales: 0, profit: 0 };
         }
         byCat[item.categoria].sales += item.ventasMensualesCrc;
         byCat[item.categoria].profit += item.utilidadMensualCrc;
-        byCat[item.categoria].invVal += item.stockTotal * item.costoActual;
     });
 
     const catLabels = Object.keys(byCat).sort((a, b) => byCat[b].sales - byCat[a].sales);
@@ -1060,58 +995,6 @@ function renderCommercialCharts(catalogList) {
                     x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
                     y: { position: 'left', ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
                     y1: { position: 'right', min: 0, max: 50, ticks: { color: '#a3e635', callback: v => v + '%' }, grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    // Gráfico 2: Clasificación ABC Ventas vs Valor de Inventario
-    const abcGroups = { A: { sales: 0, inv: 0 }, B: { sales: 0, inv: 0 }, C: { sales: 0, inv: 0 } };
-    catalogList.forEach(item => {
-        const g = abcGroups[item.abcClass] || abcGroups.C;
-        g.sales += item.ventasMensualesCrc;
-        g.inv += item.stockTotal * item.costoActual;
-    });
-
-    const ctx2 = document.getElementById('chartAbcInventory');
-    if (ctx2) {
-        if (chartAbcInstance) chartAbcInstance.destroy();
-        chartAbcInstance = new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: ['Clase A (Top 80% Ingresos)', 'Clase B (15% Ingresos)', 'Clase C (5% Cola Larga)'],
-                datasets: [
-                    {
-                        label: 'Facturación Mensual (Miles ₡)',
-                        data: [
-                            Math.round(abcGroups.A.sales / 1000),
-                            Math.round(abcGroups.B.sales / 1000),
-                            Math.round(abcGroups.C.sales / 1000)
-                        ],
-                        backgroundColor: 'rgba(34, 197, 94, 0.75)',
-                        borderRadius: 6
-                    },
-                    {
-                        label: 'Capital en Inventario (Miles ₡)',
-                        data: [
-                            Math.round(abcGroups.A.inv / 1000),
-                            Math.round(abcGroups.B.inv / 1000),
-                            Math.round(abcGroups.C.inv / 1000)
-                        ],
-                        backgroundColor: 'rgba(56, 189, 248, 0.75)',
-                        borderRadius: 6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { labels: { color: '#94a3b8', font: { family: 'Outfit', size: 11 } } }
-                },
-                scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }
                 }
             }
         });
@@ -1257,10 +1140,10 @@ function setupEvents() {
         btnSwitchMatrix.addEventListener('click', () => {
             if (appState.pricingView === 'catalog') {
                 appState.pricingView = 'cenada';
-                btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-table-list"></i> Volver a Matriz Maestra (${appState.catalog.length} SKUs)`;
+                btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-table-list"></i> Volver a Catálogo (${appState.catalog.length})`;
             } else {
                 appState.pricingView = 'catalog';
-                btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-warehouse"></i> Ver Comparativo Cajas PIMA CENADA (39)`;
+                btnSwitchMatrix.innerHTML = `<i class="fa-solid fa-warehouse"></i> Benchmark CENADA (39)`;
             }
             renderPricingModule();
         });
