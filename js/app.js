@@ -322,7 +322,7 @@ function renderPricingModule() {
         }
 
         const superHint = item.precioCompetenciaMin > 0
-            ? `<div style="font-size:10.5px; color:var(--text-muted);" title="Ref. Mín. Supermercados: ${formatCRC(item.precioCompetenciaMin)}">Ref: ${formatCRC(item.precioCompetenciaMin)}</div>`
+            ? `<div style="font-size:11px; color:var(--text-muted);" title="Ref. Mín. Supermercados: ${formatCRC(item.precioCompetenciaMin)}">Ref: ${formatCRC(item.precioCompetenciaMin)}</div>`
             : '';
 
         return `
@@ -337,7 +337,7 @@ function renderPricingModule() {
                 </td>
                 <td class="num-col" style="white-space:nowrap;">
                     <div style="display:inline-flex; align-items:center;">
-                        <input type="number" class="inline-price-input inline-cost-input" data-sku="${escapeHtml(item.sku)}" value="${costVal}" min="5" step="5" style="width:78px;" title="Editar Costo de Reposición (COGS)">
+                        <input type="number" class="inline-price-input inline-cost-input" data-sku="${escapeHtml(item.sku)}" value="${costVal}" min="5" step="5" style="width:78px;" title="Editar Costo de Reposición (COGS)" aria-label="Costo reposición COGS para SKU ${escapeHtml(item.sku)}">
                         ${varInline}
                     </div>
                 </td>
@@ -349,7 +349,7 @@ function renderPricingModule() {
                 <td class="num-col" style="color:var(--text-secondary);">${formatCRC(item.precioMayorista)}</td>
                 <td class="num-col" style="white-space:nowrap;">
                     <div style="display:inline-flex; align-items:center; gap:6px;">
-                        <input type="number" class="inline-price-input inline-retail-input" data-sku="${escapeHtml(item.sku)}" value="${item.precioDetalle}" min="5" step="5">
+                        <input type="number" class="inline-price-input inline-retail-input" data-sku="${escapeHtml(item.sku)}" value="${item.precioDetalle}" min="5" step="5" aria-label="Precio detalle para SKU ${escapeHtml(item.sku)}">
                         <span class="badge ${marginBadgeClass}">${formatPct(item.margenReposicionPct, 1)}</span>
                     </div>
                 </td>
@@ -485,11 +485,11 @@ function renderQuotesModule() {
                         <div style="font-size:11px; color:var(--text-muted);">Und: ${escapeHtml(line.unidad)} · Lista: ${formatCRC(line.precioLista)}</div>
                     </td>
                     <td class="num-col">
-                        <input type="number" class="inline-price-input quote-line-qty" data-idx="${idx}" value="${line.cantidad}" min="1" style="width:68px;">
+                        <input type="number" class="inline-price-input quote-line-qty" data-idx="${idx}" value="${line.cantidad}" min="1" style="width:68px;" aria-label="Cantidad para ${escapeHtml(line.name)}">
                     </td>
                     <td class="num-col">${formatCRC(line.costoUnit)}</td>
                     <td class="num-col">
-                        <input type="number" class="inline-price-input quote-line-disc" data-idx="${idx}" value="${line.descuentoPct}" min="0" max="35" step="0.5" style="width:60px;">
+                        <input type="number" class="inline-price-input quote-line-disc" data-idx="${idx}" value="${line.descuentoPct}" min="0" max="35" step="0.5" style="width:60px;" aria-label="Porcentaje de descuento para ${escapeHtml(line.name)}">
                     </td>
                     <td class="num-col" style="font-weight:800;">${formatCRC(precioFinal)}</td>
                     <td class="num-col" style="font-weight:700;">${formatCRC(subtotal)}</td>
@@ -575,7 +575,7 @@ function renderQuotesModule() {
     if (listCont) {
         if (appState.quotes.length === 0) {
             listCont.innerHTML = `
-                <div style="background:var(--bg-elevated); border:1px dashed var(--border-color); border-radius:var(--radius-sm); padding:24px 16px; text-align:center; color:var(--text-muted); font-size:12.5px;">
+                <div style="background:var(--bg-elevated); border:1px dashed var(--border-color); border-radius:var(--radius-sm); padding:24px 16px; text-align:center; color:var(--text-muted); font-size:13px;">
                     <i class="fa-solid fa-folder-open" style="font-size:24px; color:var(--text-muted); margin-bottom:8px; display:block;"></i>
                     No hay cotizaciones guardadas en cartera activa.
                 </div>
@@ -600,8 +600,8 @@ function renderQuotesModule() {
                     <div style="background:var(--bg-elevated); border:1px solid ${isCurrent ? 'var(--brand-green)' : 'var(--border-color)'}; border-radius:var(--radius-sm); padding:13px 15px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
                             <div>
-                                <strong style="color:var(--brand-green); font-size:13.5px;">${escapeHtml(q.id)}</strong>
-                                <span style="font-size:11.5px; color:var(--text-muted); margin-left:6px;">${escapeHtml(q.fecha)}</span>
+                                <strong style="color:var(--brand-green); font-size:14px;">${escapeHtml(q.id)}</strong>
+                                <span style="font-size:12px; color:var(--text-muted); margin-left:6px;">${escapeHtml(q.fecha)}</span>
                                 <div style="font-weight:700; font-size:14px; margin-top:2px;">${escapeHtml(q.clienteNombre)}</div>
                             </div>
                             ${statusBadge}
@@ -670,7 +670,7 @@ function openQuotePrintModal() {
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e8b57; padding-bottom:14px; margin-bottom:16px;">
                 <div>
                     <h2 style="margin:0; color:#0c2340; font-size:22px; font-weight:800;">INTERFRUTD · EL FRUTO PERFECTO</h2>
-                    <p style="margin:2px 0 0; font-size:12.5px; color:#475569;">Departamento Comercial & Pricing Corporativo · Santo Domingo, Heredia, Costa Rica</p>
+                    <p style="margin:2px 0 0; font-size:13px; color:#475569;">Departamento Comercial & Pricing Corporativo · Santo Domingo, Heredia, Costa Rica</p>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-size:18px; font-weight:800; color:#2e8b57;">${escapeHtml(draft.id)}</div>
@@ -689,7 +689,7 @@ function openQuotePrintModal() {
                 </div>
             </div>
 
-            <table style="width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:16px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:16px;">
                 <thead>
                     <tr style="background:#0c2340; color:#ffffff;">
                         <th style="padding:8px; text-align:left;">Código</th>
@@ -857,7 +857,9 @@ function openClientModal(clientId = null) {
         const activeDays = cli.diasEntrega || ['L', 'K', 'V'];
         dayPills.forEach(btn => {
             const d = btn.getAttribute('data-formday');
-            btn.classList.toggle('active', activeDays.includes(d));
+            const isActive = activeDays.includes(d);
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     } else {
         if (title) title.innerHTML = `<i class="fa-solid fa-user-plus" style="color:var(--brand-green-light); margin-right:6px;"></i>Registrar Nuevo Cliente Corporativo B2B`;
@@ -877,7 +879,9 @@ function openClientModal(clientId = null) {
         const defaultDays = ['L', 'K', 'V'];
         dayPills.forEach(btn => {
             const d = btn.getAttribute('data-formday');
-            btn.classList.toggle('active', defaultDays.includes(d));
+            const isActive = defaultDays.includes(d);
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
@@ -1118,7 +1122,7 @@ function renderOrdersAndInventoryModule() {
             const dias = cli.diasEntrega || [];
             const dayButtonsHtml = allDays.map(d => {
                 const isOn = dias.includes(d.code);
-                return `<button type="button" class="day-pill-btn ${isOn ? 'active' : ''}" data-cli="${escapeHtml(cli.id)}" data-daycode="${d.code}" title="${d.title}: ${isOn ? 'Entrega Activa' : 'Sin Entrega'}">${d.code}</button>`;
+                return `<button type="button" class="day-pill-btn ${isOn ? 'active' : ''}" data-cli="${escapeHtml(cli.id)}" data-daycode="${d.code}" aria-pressed="${isOn ? 'true' : 'false'}" aria-label="Entrega ${d.title} para ${escapeHtml(cli.nombre)}: ${isOn ? 'Activa' : 'Inactiva'}" title="${d.title}: ${isOn ? 'Entrega Activa' : 'Sin Entrega'}">${d.code}</button>`;
             }).join('');
 
             return `
@@ -1207,7 +1211,7 @@ function renderOrdersAndInventoryModule() {
         });
 
         if (filteredOCs.length === 0) {
-            ocTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:22px 14px; color:var(--text-muted); font-size:12.5px;">No hay órdenes de compra registradas con el filtro activo.</td></tr>`;
+            ocTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:22px 14px; color:var(--text-muted); font-size:13px;">No hay órdenes de compra registradas con el filtro activo.</td></tr>`;
             return;
         }
 
@@ -1235,7 +1239,7 @@ function renderOrdersAndInventoryModule() {
                     </td>
                     <td style="white-space:nowrap;">
                         <div style="font-weight:600;">${escapeHtml(oc.fechaEntregaCompromiso)}</div>
-                        <div style="font-size:10.5px; color:var(--text-muted);">${escapeHtml(oc.ventanaAnden || 'Andén Matutino')}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(oc.ventanaAnden || 'Andén Matutino')}</div>
                     </td>
                     <td class="num-col" style="white-space:nowrap;">
                         <strong>${formatNum(desp)}</strong> <span style="color:var(--text-muted);">/ ${formatNum(pedida)} und</span>
@@ -1262,7 +1266,7 @@ function renderOrdersAndInventoryModule() {
                             <button type="button" class="btn btn-primary btn-sm btn-advance-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Avanzar etapa logística">
                                 <i class="fa-solid fa-forward-step"></i>
                             </button>` : `
-                            <span class="badge badge-success" style="font-size:10.5px;"><i class="fa-solid fa-circle-check"></i> Recibida</span>
+                            <span class="badge badge-success" style="font-size:11px;"><i class="fa-solid fa-circle-check"></i> Recibida</span>
                             `}
                             <button type="button" class="btn btn-danger btn-sm btn-delete-oc" data-oc="${escapeHtml(oc.ocNumero)}" title="Eliminar / Cancelar Orden de Compra">
                                 <i class="fa-solid fa-trash"></i>
@@ -1367,12 +1371,16 @@ function setupEvents() {
         });
     }
 
-    // Buscador global + Atajo Ctrl+K
+    // Buscador global + Atajo Ctrl+K (Debounce 120ms para rendimiento a 60fps)
     const searchInput = document.getElementById('globalSearchInput');
     if (searchInput) {
+        let searchDebounceTimer = null;
         searchInput.addEventListener('input', () => {
-            appState.searchQuery = searchInput.value;
-            renderActiveModule();
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                appState.searchQuery = searchInput.value;
+                renderActiveModule();
+            }, 120);
         });
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -1489,8 +1497,12 @@ function setupEvents() {
 
     document.querySelectorAll('#pricingQuickChips .chip-btn').forEach(chip => {
         chip.addEventListener('click', () => {
-            document.querySelectorAll('#pricingQuickChips .chip-btn').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('#pricingQuickChips .chip-btn').forEach(c => {
+                c.classList.remove('active');
+                c.setAttribute('aria-pressed', 'false');
+            });
             chip.classList.add('active');
+            chip.setAttribute('aria-pressed', 'true');
             appState.pricingDiagFilter = chip.getAttribute('data-pfilter');
             renderPricingModule();
         });
@@ -1912,8 +1924,12 @@ function setupEvents() {
     // ------------------------------------------------------------------------
     document.querySelectorAll('#dayFilterGroup .chip-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#dayFilterGroup .chip-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#dayFilterGroup .chip-btn').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-pressed', 'false');
+            });
             btn.classList.add('active');
+            btn.setAttribute('aria-pressed', 'true');
             appState.selectedScheduleDay = btn.getAttribute('data-day') || 'ALL';
             renderOrdersAndInventoryModule();
         });
@@ -2023,6 +2039,7 @@ function setupEvents() {
                 return;
             }
             btn.classList.toggle('active');
+            btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
         });
     });
 
@@ -2033,8 +2050,12 @@ function setupEvents() {
 
     document.querySelectorAll('#ocStatusFilterGroup .chip-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#ocStatusFilterGroup .chip-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#ocStatusFilterGroup .chip-btn').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-pressed', 'false');
+            });
             btn.classList.add('active');
+            btn.setAttribute('aria-pressed', 'true');
             appState.ocFilterStatus = btn.getAttribute('data-ocfilter');
             renderOrdersAndInventoryModule();
         });

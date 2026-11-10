@@ -17,9 +17,9 @@
     --text-muted: #94a3b8;
 
     /* Colores Institucionales */
-    --brand-green: #2e8b57;
-    --brand-green-light: #4db848;
-    --brand-green-glow: rgba(46, 139, 87, 0.16);
+    --brand-green: #237346;
+    --brand-green-light: #52c44c;
+    --brand-green-glow: rgba(35, 115, 70, 0.2);
     --brand-lime: #a3e635;
     --brand-navy: #0c2340;
     --brand-blue: #38bdf8;
@@ -38,7 +38,7 @@
     --radius-md: 10px;
     --radius-lg: 14px;
     --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.3);
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -54,9 +54,9 @@ html[data-theme="light"] {
     --text-secondary: #334155;
     --text-muted: #64748b;
 
-    --brand-green: #2e8b57;
-    --brand-green-light: #228b22;
-    --brand-green-glow: rgba(46, 139, 87, 0.1);
+    --brand-green: #237346;
+    --brand-green-light: #1e703f;
+    --brand-green-glow: rgba(35, 115, 70, 0.12);
     --brand-lime: #65a30d;
     --brand-navy: #0c2340;
     --brand-blue: #0284c7;
@@ -79,6 +79,11 @@ html[data-theme="light"] {
     padding: 0;
 }
 
+html {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+}
+
 body {
     font-family: var(--font-sans);
     background-color: var(--bg-app);
@@ -89,6 +94,10 @@ body {
     overflow-x: hidden;
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
+}
+
+input, select, textarea, button, input[type="range"], input[type="hidden"], .chain-range {
+    color: var(--text-main);
 }
 
 /* ==========================================================================
@@ -122,28 +131,21 @@ body {
 }
 
 .interfrutd-emblem {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #5ec759, #2e7d32);
+    background: radial-gradient(circle at 30% 30%, #5ec759, #237346);
     border: 2px solid #ffffff;
     box-shadow: 0 0 0 2px rgba(77, 184, 72, 0.35);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-weight: 800;
-    font-size: 8px;
-    letter-spacing: 0.5px;
     color: #ffffff;
-    text-align: center;
-    line-height: 1.05;
     flex-shrink: 0;
 }
 
 .interfrutd-emblem i {
-    font-size: 14px;
-    margin-bottom: 1px;
+    font-size: 18px;
 }
 
 .brand-titles h1 {
@@ -170,8 +172,8 @@ body {
 
 .brand-subtitle {
     font-size: 12px;
-    color: #94a3b8;
-    margin-top: 1px;
+    color: #cbd5e1;
+    margin-top: 2px;
 }
 
 .header-actions {
@@ -203,13 +205,14 @@ body {
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     outline: none;
     transition: all 0.2s;
 }
 
 .global-search-input::placeholder {
-    color: #94a3b8;
+    color: #e2e8f0;
+    opacity: 0.85;
 }
 
 .global-search-input:focus {
@@ -286,7 +289,7 @@ body {
 }
 
 .filter-label {
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-muted);
 }
@@ -327,6 +330,7 @@ body {
 .kpi-card {
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
+    border-top: 2px solid var(--brand-green);
     border-radius: var(--radius-md);
     padding: 14px 18px;
     box-shadow: var(--shadow-card);
@@ -335,27 +339,18 @@ body {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.kpi-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 3px;
-    height: 100%;
-    background: var(--brand-green);
-}
-
-.kpi-card.kpi-warning::before { background: var(--warning); }
-.kpi-card.kpi-danger::before { background: var(--danger); }
-.kpi-card.kpi-info::before { background: var(--info); }
+.kpi-card.kpi-warning { border-top-color: var(--warning); }
+.kpi-card.kpi-danger { border-top-color: var(--danger); }
+.kpi-card.kpi-info { border-top-color: var(--info); }
 
 .kpi-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.4px;
@@ -413,7 +408,7 @@ body {
     align-items: center;
     gap: 8px;
     font-family: var(--font-heading);
-    font-size: 15.5px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--text-main);
 }
@@ -445,7 +440,7 @@ body {
     border: 1px solid var(--border-color);
     color: var(--text-main);
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     padding: 6px 11px;
     border-radius: var(--radius-sm);
     outline: none;
@@ -455,6 +450,11 @@ body {
 .input-control:focus,
 .select-control:focus {
     border-color: var(--brand-green-light);
+}
+
+.select-control option {
+    background: var(--bg-surface);
+    color: var(--text-main);
 }
 
 .btn {
@@ -473,9 +473,9 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #2e8b57, #246d44);
+    background: linear-gradient(135deg, #247346, #1b5634);
     color: #ffffff;
-    box-shadow: 0 2px 6px rgba(46, 139, 87, 0.25);
+    box-shadow: 0 2px 6px rgba(36, 115, 70, 0.3);
 }
 
 .btn-primary:hover {
@@ -511,8 +511,9 @@ body {
 }
 
 .btn-sm {
-    padding: 4px 9px;
-    font-size: 11.5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    min-height: 28px;
 }
 
 /* Filter Pill Buttons */
@@ -523,7 +524,7 @@ body {
     padding: 4px 10px;
     border-radius: 999px;
     font-family: inherit;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
@@ -549,8 +550,6 @@ body {
 .table-scroll {
     width: 100%;
     overflow-x: auto;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
     max-height: 560px;
     overflow-y: auto;
 }
@@ -558,7 +557,7 @@ body {
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12.5px;
+    font-size: 13px;
 }
 
 .data-table thead th {
@@ -569,7 +568,7 @@ body {
     color: var(--text-secondary);
     font-weight: 700;
     text-transform: uppercase;
-    font-size: 10.5px;
+    font-size: 11px;
     letter-spacing: 0.35px;
     padding: 9px 12px;
     border-bottom: 1px solid var(--border-color);
@@ -660,7 +659,7 @@ body {
 }
 
 .oc-step {
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 3px;
@@ -767,7 +766,7 @@ body {
     padding: 10px 14px;
     border-radius: var(--radius-sm);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -798,7 +797,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--text-main);
     white-space: nowrap;
@@ -849,7 +848,7 @@ body {
 }
 
 .chain-card-name {
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--text-main);
     display: inline-flex;
@@ -861,7 +860,7 @@ body {
 
 .chain-card-name i {
     color: var(--brand-green-light);
-    font-size: 11.5px;
+    font-size: 12px;
 }
 
 .chain-control-wrap {
@@ -955,8 +954,9 @@ body {
 }
 
 .day-pill-btn {
-    width: 26px;
-    height: 24px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0 4px;
     border-radius: 5px;
     border: 1px solid var(--border-color);
     background: var(--bg-app);
@@ -968,7 +968,14 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative;
     transition: all 0.14s ease;
+}
+
+.day-pill-btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
 }
 
 .day-pill-btn:hover {
@@ -1052,7 +1059,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 10.5px;
+    font-size: 11px;
     color: var(--text-muted);
 }
 
@@ -1065,5 +1072,15 @@ body {
     body {
         background: #ffffff !important;
         color: #000000 !important;
+    }
+}
+
+/* Accessibility — Prefers Reduced Motion (WCAG 2.1 Criteria 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
