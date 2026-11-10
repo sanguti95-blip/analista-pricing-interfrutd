@@ -29,12 +29,15 @@ import {
 // ESTADO REACTIVO DE LA APLICACIÓN
 // ============================================================================
 const appState = {
-    activeTab: 'pricing',
+    activeTab: 'dashboard',
     searchQuery: '',
     globalCategory: 'ALL',
     globalAbc: 'ALL',
 
-    // Módulo 1: Pricing & Listas
+    // Módulo 1: Full Dashboard BI 360°
+    dashPlGroupMode: 'SUBCATEGORIA',
+
+    // Módulo 2: Pricing & Listas
     pricingView: 'catalog', // 'catalog' | 'cenada'
     activePriceListChannel: 'ALL',
     targetMarginSimPct: 30,
@@ -48,7 +51,7 @@ const appState = {
     catalog: [],
     cenadaList: [...CENADA_BENCHMARK],
 
-    // Módulo 2: Cotizaciones B2B
+    // Módulo 3: Cotizaciones B2B
     clients: [...B2B_CLIENTS],
     quotes: [],
     activeQuoteDraft: {
@@ -61,7 +64,7 @@ const appState = {
         items: []
     },
 
-    // Módulo 3: Programación de Días, Clientes y Órdenes de Compra (OC)
+    // Módulo 4: Programación de Días, Clientes y Órdenes de Compra (OC)
     selectedScheduleDay: 'ALL',
     purchaseOrders: [],
     ocFilterStatus: 'ALL',
@@ -70,6 +73,10 @@ const appState = {
 
 let chartCatInstance = null;
 let chartAbcInstance = null;
+let chartDashCatInstance = null;
+let chartDashAbcInstance = null;
+let chartDashBenchInstance = null;
+let chartDashWeeklyInstance = null;
 
 // ============================================================================
 // INICIALIZACIÓN Y RESTAURACIÓN DE ESTADO LOCAL
@@ -183,6 +190,7 @@ function recalcSkuMetrics(item) {
     item.margenReposicionPct = Math.round(((price - cost) / price) * 1000) / 10;
     item.margenActualPct = Math.round(((price - item.costoActual) / price) * 1000) / 10;
     item.ventasMensualesCrc = Math.round(item.demandaMensualUnd * price);
+    item.costoMensualCrc = Math.round(item.demandaMensualUnd * cost);
     item.utilidadMensualCrc = Math.round(item.demandaMensualUnd * (price - cost));
 
     if (item.margenReposicionPct < 16) item.estadoPrecio = 'MARGEN_CRITICO';
@@ -1279,47 +1287,520 @@ function renderOrdersAndInventoryModule() {
     }
 }
 
-function renderCommercialCharts(catalogList) {
-    if (typeof Chart === 'undefined') return;
+// ============================================================================
+// MÓDULO 1 (INICIO): FULL DASHBOARD BI — TORRE DE CONTROL EJECUTIVA 360°
+// ============================================================================
+function renderDashboardModule() {
+    const baseList = getFilteredCatalog();
+    baseList.forEach(recalcSkuMetrics);
 
-    // Agrupar ventas y margen por Categoría
-    const byCat = {};
-    catalogList.forEach(item => {
-        if (!byCat[item.categoria]) {
-            byCat[item.categoria] = { sales: 0, profit: 0 };
+    // Sincronizar contadores globales de pestañas
+    const bPrice = document.getElementById('badgeCountPricing');
+    if (bPrice) bPrice.textContent = String(baseList.length);
+    const bQuotes = document.getElementById('badgeCountQuotes');
+    if (bQuotes) bQuotes.textContent = String(appState.quotes.length);
+    const bOc = document.getElementById('badgeCountOC');
+    if (bOc) bOc.textContent = String(appState.purchaseOrders.length);
+
+    // 1. Cálculo de Macro-KPIs Financieros, Competitivos y Logísticos
+    const totalSkus = baseList.length;
+    const totalUnits = baseList.reduce((acc, x) => acc + (x.demandaMensualUnd || 0), 0);
+    const totalSales = baseList.reduce((acc, x) => acc + (x.ventasMensualesCrc || 0), 0);
+    const totalCost = baseList.reduce((acc, x) => acc + (x.costoMensualCrc || Math.round((x.demandaMensualUnd || 0) * (x.costoReposicion || x.costoActual))), 0);
+    const totalProfit = totalSales - totalCost;
+    const weightedMarginPct = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+
+    // Potencial de captura mensual (+₡/mes) al llevar SKUs sub-valorados a precioSugeridoMeta
+    let potentialCaptureCrc = 0;
+    let actionableSkusCount = 0;
+    baseList.forEach(x => {
+        if (x.precioSugeridoMeta > x.precioDetalle) {
+            const delta = (x.precioSugeridoMeta - x.precioDetalle) * (x.demandaMensualUnd || 0);
+            if (delta > 0) {
+                potentialCaptureCrc += delta;
+                actionableSkusCount++;
+            }
         }
-        byCat[item.categoria].sales += item.ventasMensualesCrc;
-        byCat[item.categoria].profit += item.utilidadMensualCrc;
     });
 
-    const catLabels = Object.keys(byCat).sort((a, b) => byCat[b].sales - byCat[a].sales);
-    const salesData = catLabels.map(c => Math.round(byCat[c].sales / 1000)); // Miles ₡
-    const marginData = catLabels.map(c => byCat[c].sales > 0 ? Math.round((byCat[c].profit / byCat[c].sales) * 1000) / 10 : 0);
+    const criticalMarginCount = baseList.filter(x => x.margenReposicionPct < 16).length;
+    const costUpCount = baseList.filter(x => x.varCostoPct >= 6).length;
 
-    const ctx1 = document.getElementById('chartCategorySalesMargin');
-    if (ctx1) {
-        if (chartCatInstance) chartCatInstance.destroy();
-        chartCatInstance = new Chart(ctx1, {
+    // Posicionamiento competitivo vs Supermercados & CENADA
+    const withBench = baseList.filter(x => x.precioCompetenciaMin > 0);
+    const competitiveCount = withBench.filter(x => x.precioSupermercado <= x.precioCompetenciaProm || x.precioDetalle <= x.precioCompetenciaMin).length;
+    const compIndexPct = withBench.length > 0 ? (competitiveCount / withBench.length) * 100 : 100;
+
+    // Cartera B2B (Cotizaciones + Órdenes de Compra)
+    const quotesRev = appState.quotes.reduce((sum, q) => {
+        return sum + (q.items || []).reduce((s, i) => s + (i.cantidad * (i.precioFinal || i.precioLista || 0)), 0);
+    }, 0);
+
+    let ocRev = 0;
+    let ocOrderedUnits = 0;
+    let ocDispatchedUnits = 0;
+    let ocPerfectCount = 0;
+    appState.purchaseOrders.forEach(oc => {
+        let ped = 0;
+        let desp = 0;
+        (oc.lineas || []).forEach(l => {
+            ped += l.cantPedida || 0;
+            desp += l.cantDespachada || 0;
+            ocRev += (l.cantDespachada || 0) * (l.precioUnit || 0);
+        });
+        ocOrderedUnits += ped;
+        ocDispatchedUnits += desp;
+        if (ped > 0 && desp >= ped && oc.aTiempo !== false) ocPerfectCount++;
+    });
+
+    const globalFillRatePct = ocOrderedUnits > 0 ? (ocDispatchedUnits / ocOrderedUnits) * 100 : 100;
+    const globalOtifPct = appState.purchaseOrders.length > 0 ? (ocPerfectCount / appState.purchaseOrders.length) * 100 : 100;
+
+    // Renderizar 6 Macro-KPIs Ejecutivos
+    const kpiGrid = document.getElementById('dashboardKpiGrid');
+    if (kpiGrid) {
+        kpiGrid.innerHTML = `
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Ingresos Mensuales (P&amp;L)</span><i class="fa-solid fa-sack-dollar"></i></div>
+                <div class="kpi-value">${formatCRC(totalSales)}</div>
+                <div class="kpi-sub">
+                    <span class="badge badge-info">${formatNum(totalUnits)} und/mes</span>
+                    <span>en ${formatNum(totalSkus)} SKUs activos</span>
+                </div>
+            </div>
+            <div class="kpi-card ${weightedMarginPct < 24 ? 'kpi-warning' : ''}">
+                <div class="kpi-header"><span>Utilidad Bruta &amp; Margen</span><i class="fa-solid fa-chart-line"></i></div>
+                <div class="kpi-value">${formatCRC(totalProfit)}</div>
+                <div class="kpi-sub">
+                    <span class="badge ${weightedMarginPct >= 28 ? 'badge-success' : 'badge-warning'}">${formatPct(weightedMarginPct, 1)} Real</span>
+                    <span>COGS: ${formatCRC(totalCost)}</span>
+                </div>
+            </div>
+            <div class="kpi-card ${potentialCaptureCrc > 0 ? 'kpi-warning' : ''}">
+                <div class="kpi-header"><span>Oportunidad Captura Valor</span><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <div class="kpi-value" style="color:var(--brand-lime);">+${formatCRC(potentialCaptureCrc)}</div>
+                <div class="kpi-sub">
+                    <span class="badge ${criticalMarginCount > 0 ? 'badge-danger' : 'badge-success'}">${criticalMarginCount} Críticos</span>
+                    <span>${actionableSkusCount} SKUs bajo meta</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Índice Competitivo Retail</span><i class="fa-solid fa-scale-balanced"></i></div>
+                <div class="kpi-value">${formatPct(compIndexPct, 1)}</div>
+                <div class="kpi-sub">
+                    <span class="badge badge-success">${competitiveCount}/${withBench.length} SKUs</span>
+                    <span>mejor o igual a Superm.</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-info">
+                <div class="kpi-header"><span>Pipeline Comercial B2B</span><i class="fa-solid fa-briefcase"></i></div>
+                <div class="kpi-value">${formatCRC(quotesRev + ocRev)}</div>
+                <div class="kpi-sub">
+                    <span>${appState.quotes.length} Cotiz. (${formatCRC(quotesRev)})</span>
+                    <span>· ${appState.purchaseOrders.length} OCs</span>
+                </div>
+            </div>
+            <div class="kpi-card ${globalFillRatePct < 95 ? 'kpi-danger' : ''}">
+                <div class="kpi-header"><span>Fill Rate &amp; SLA Logístico</span><i class="fa-solid fa-truck-ramp-box"></i></div>
+                <div class="kpi-value">${formatPct(globalFillRatePct, 1)}</div>
+                <div class="kpi-sub">
+                    <span class="badge ${globalOtifPct >= 80 ? 'badge-success' : 'badge-warning'}">OTIF ${formatPct(globalOtifPct, 0)}</span>
+                    <span>${appState.clients.length} Clientes en ruta L-S</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Actualizar texto ejecutivo de insight rápido
+    const insightEl = document.getElementById('dashboardQuickInsightText');
+    if (insightEl) {
+        insightEl.innerHTML = `
+            Rentabilidad actual de <strong>${formatPct(weightedMarginPct, 1)}</strong> (${formatCRC(totalProfit)}/mes).
+            Existen <strong>${actionableSkusCount} SKUs</strong> con potencial de captura inmediata de <strong style="color:var(--brand-lime);">+${formatCRC(potentialCaptureCrc)}/mes</strong>
+            y <strong>${costUpCount} SKUs</strong> con alza reciente de costo de reposición (&ge;6%).
+        `;
+    }
+
+    // 2. Renderizar Tabla de Estado de Resultados Comercial (P&L)
+    renderDashboardPlTable(baseList, totalSales, totalCost, totalProfit, totalUnits, potentialCaptureCrc);
+
+    // 3. Renderizar Salud Operativa 360° (CEDI, Reorden, Embudo B2B, Carga Semanal)
+    renderDashboardOperationalCards(baseList, quotesRev, ocRev, globalFillRatePct);
+
+    // 4. Renderizar Tablas Duales: Top 10 Cash Cows vs. Top 10 Erosión de Margen
+    renderDashboardActionTables(baseList);
+
+    // 5. Renderizar los 4 Gráficos Interactivos Chart.js
+    renderDashboardCharts(baseList);
+}
+
+function renderDashboardPlTable(baseList, totalSales, totalCost, totalProfit, totalUnits, totalCapture) {
+    const tbody = document.getElementById('dashboardPlTableBody');
+    const tfoot = document.getElementById('dashboardPlTableFoot');
+    if (!tbody || !tfoot) return;
+
+    const mode = appState.dashPlGroupMode || 'SUBCATEGORIA';
+    const groups = {};
+
+    baseList.forEach(item => {
+        let key = item.subcategoria || item.categoria || 'General';
+        if (mode === 'CATEGORIA') key = item.categoria || 'General';
+        else if (mode === 'ABC') key = `Clase ${item.abcClass} (${item.abcClass === 'A' ? 'Top 80% Valor' : item.abcClass === 'B' ? '15% Intermedio' : '5% Complementario'})`;
+
+        if (!groups[key]) {
+            groups[key] = {
+                name: key,
+                categoriaParent: item.categoria,
+                skus: 0,
+                aCount: 0,
+                bCount: 0,
+                cCount: 0,
+                units: 0,
+                sales: 0,
+                cogs: 0,
+                profit: 0,
+                capture: 0,
+                metaSum: 0
+            };
+        }
+        const g = groups[key];
+        g.skus++;
+        if (item.abcClass === 'A') g.aCount++;
+        else if (item.abcClass === 'B') g.bCount++;
+        else g.cCount++;
+
+        const u = item.demandaMensualUnd || 0;
+        const s = item.ventasMensualesCrc || 0;
+        const c = item.costoMensualCrc || Math.round(u * (item.costoReposicion || item.costoActual));
+        g.units += u;
+        g.sales += s;
+        g.cogs += c;
+        g.profit += (s - c);
+        g.metaSum += (item.margenMetaPct || 32);
+
+        if (item.precioSugeridoMeta > item.precioDetalle) {
+            g.capture += Math.round((item.precioSugeridoMeta - item.precioDetalle) * u);
+        }
+    });
+
+    const sortedGroups = Object.values(groups).sort((a, b) => b.sales - a.sales);
+
+    tbody.innerHTML = sortedGroups.map(g => {
+        const marginPct = g.sales > 0 ? (g.profit / g.sales) * 100 : 0;
+        const avgMetaPct = g.skus > 0 ? g.metaSum / g.skus : 32;
+        const shareSalesPct = totalSales > 0 ? (g.sales / totalSales) * 100 : 0;
+
+        let badgeClass = 'badge-success';
+        let diagLabel = 'Rentabilidad Óptima';
+        if (marginPct < 18) {
+            badgeClass = 'badge-danger';
+            diagLabel = 'Erosión Crítica';
+        } else if (marginPct < avgMetaPct - 3) {
+            badgeClass = 'badge-warning';
+            diagLabel = 'Bajo Meta Canal';
+        }
+
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight:700;">${escapeHtml(g.name)}</div>
+                    <div style="font-size:11px; color:var(--text-muted);">${mode === 'SUBCATEGORIA' ? escapeHtml(g.categoriaParent) + ' · ' : ''}${formatPct(shareSalesPct, 1)} de las ventas</div>
+                </td>
+                <td class="center-col" style="white-space:nowrap;">
+                    <strong>${g.skus}</strong>
+                    <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">(${g.aCount}A · ${g.bCount}B · ${g.cCount}C)</span>
+                </td>
+                <td class="num-col">${formatNum(g.units)} und</td>
+                <td class="num-col" style="font-weight:700;">${formatCRC(g.sales)}</td>
+                <td class="num-col" style="color:var(--text-secondary);">${formatCRC(g.cogs)}</td>
+                <td class="num-col" style="font-weight:700; color:var(--brand-lime);">${formatCRC(g.profit)}</td>
+                <td class="center-col" style="white-space:nowrap;">
+                    <span class="badge ${badgeClass}">${formatPct(marginPct, 1)}</span>
+                    <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">/ ${formatPct(avgMetaPct, 0)}</span>
+                </td>
+                <td class="num-col" style="font-weight:700; color:${g.capture > 0 ? 'var(--warning)' : 'var(--text-muted)'};">
+                    ${g.capture > 0 ? '+' + formatCRC(g.capture) : '₡0'}
+                </td>
+                <td class="center-col">
+                    <span class="badge ${badgeClass}">${diagLabel}</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const totalMarginPct = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+    tfoot.innerHTML = `
+        <tr style="background:var(--bg-elevated); font-weight:800; border-top:2px solid var(--brand-green);">
+            <td>TOTAL CONSOLIDADO (${sortedGroups.length} segmentos)</td>
+            <td class="center-col">${baseList.length} SKUs</td>
+            <td class="num-col">${formatNum(totalUnits)} und</td>
+            <td class="num-col">${formatCRC(totalSales)}</td>
+            <td class="num-col">${formatCRC(totalCost)}</td>
+            <td class="num-col" style="color:var(--brand-lime);">${formatCRC(totalProfit)}</td>
+            <td class="center-col"><span class="badge badge-success">${formatPct(totalMarginPct, 1)} Ponderado</span></td>
+            <td class="num-col" style="color:var(--warning);">+${formatCRC(totalCapture)}</td>
+            <td class="center-col"><span class="badge badge-info">P&amp;L Activo</span></td>
+        </tr>
+    `;
+}
+
+function renderDashboardOperationalCards(baseList, quotesRev, ocRev, globalFillRatePct) {
+    const grid = document.getElementById('dashOperationalGrid');
+    if (!grid) return;
+
+    // 1. Valorización de Inventario CEDI & Ruta
+    const totalStockUnits = baseList.reduce((s, x) => s + (x.stockTotal || 0), 0);
+    const totalStockValueCrc = baseList.reduce((s, x) => s + ((x.stockTotal || 0) * (x.costoReposicion || x.costoActual)), 0);
+    const avgCoverageDays = baseList.length > 0
+        ? baseList.reduce((s, x) => s + (x.diasCobertura || 0), 0) / baseList.length
+        : 0;
+
+    // 2. Riesgo de Quiebre / Punto de Reorden
+    const reorderAlerts = baseList.filter(x => (x.stockTotal || 0) <= (x.puntoReorden || 0));
+    const classAReorder = reorderAlerts.filter(x => x.abcClass === 'A').length;
+
+    // 3. Conversión de Cartera B2B
+    const approvedQuotes = appState.quotes.filter(q => q.estado === 'APROBADA' || q.estado === 'RECIBIDA_CLIENTE' || q.estado === 'CONVERTIDA_OC').length;
+    const convRatePct = appState.quotes.length > 0 ? (approvedQuotes / appState.quotes.length) * 100 : 100;
+
+    // 4. Distribución de Clientes por Día (L-S)
+    const dayCounts = { L: 0, M: 0, K: 0, J: 0, V: 0, S: 0 };
+    appState.clients.forEach(c => {
+        (c.diasEntrega || []).forEach(d => {
+            if (dayCounts[d] !== undefined) dayCounts[d]++;
+        });
+    });
+    const peakDayEntry = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0] || ['L', 0];
+    const dayNames = { L: 'Lunes', M: 'Martes', K: 'Miércoles', J: 'Jueves', V: 'Viernes', S: 'Sábado' };
+
+    grid.innerHTML = `
+        <div class="otif-card">
+            <div class="otif-card-top">
+                <span class="otif-channel-name"><i class="fa-solid fa-warehouse"></i> Valorización Stock CEDI</span>
+                <span class="badge badge-info">${formatNum(totalStockUnits)} und</span>
+            </div>
+            <div class="otif-card-metrics">
+                <div class="otif-big-pct">${formatCRC(totalStockValueCrc)}</div>
+                <div class="otif-sub-Right">
+                    <div>Cobertura: <strong>${avgCoverageDays.toFixed(1)} días</strong></div>
+                    <div>Rotación Frescos</div>
+                </div>
+            </div>
+            <div class="otif-progress-track">
+                <div class="otif-progress-bar" style="width: 82%; background: var(--info);"></div>
+            </div>
+            <div class="otif-card-footer">
+                <span>Bodega 401 + Ruta 402</span>
+                <span>Costo Reposición</span>
+            </div>
+        </div>
+
+        <div class="otif-card">
+            <div class="otif-card-top">
+                <span class="otif-channel-name"><i class="fa-solid fa-bell"></i> Alerta Abastecimiento</span>
+                <span class="badge ${reorderAlerts.length > 0 ? 'badge-warning' : 'badge-success'}">${reorderAlerts.length} SKUs en Reorden</span>
+            </div>
+            <div class="otif-card-metrics">
+                <div class="otif-big-pct" style="color:${classAReorder > 0 ? 'var(--warning)' : 'var(--success)'};">${classAReorder} Clase A</div>
+                <div class="otif-sub-Right">
+                    <div>Bajo stock seguridad</div>
+                    <div>Prioridad Compras</div>
+                </div>
+            </div>
+            <div class="otif-progress-track">
+                <div class="otif-progress-bar" style="width: ${Math.min(100, Math.round((reorderAlerts.length / Math.max(1, baseList.length)) * 100))}%; background: var(--warning);"></div>
+            </div>
+            <div class="otif-card-footer">
+                <span>Total catálogo: ${baseList.length} SKUs</span>
+                <span>Revisión diaria</span>
+            </div>
+        </div>
+
+        <div class="otif-card">
+            <div class="otif-card-top">
+                <span class="otif-channel-name"><i class="fa-solid fa-filter-circle-dollar"></i> Conversión Cartera B2B</span>
+                <span class="badge badge-success">${formatPct(convRatePct, 0)} Efectividad</span>
+            </div>
+            <div class="otif-card-metrics">
+                <div class="otif-big-pct">${formatCRC(quotesRev)}</div>
+                <div class="otif-sub-Right">
+                    <div><strong>${approvedQuotes}/${appState.quotes.length}</strong> Aprobadas</div>
+                    <div>OCs: ${formatCRC(ocRev)}</div>
+                </div>
+            </div>
+            <div class="otif-progress-track">
+                <div class="otif-progress-bar" style="width: ${Math.min(100, convRatePct)}%; background: var(--success);"></div>
+            </div>
+            <div class="otif-card-footer">
+                <span>Cotizaciones activas</span>
+                <span>Ciclo B2B en vivo</span>
+            </div>
+        </div>
+
+        <div class="otif-card">
+            <div class="otif-card-top">
+                <span class="otif-channel-name"><i class="fa-solid fa-calendar-week"></i> Ruteo Semanal L-S</span>
+                <span class="badge badge-info">Pico: ${dayNames[peakDayEntry[0]]} (${peakDayEntry[1]})</span>
+            </div>
+            <div class="otif-card-metrics">
+                <div class="otif-big-pct">${formatPct(globalFillRatePct, 1)}</div>
+                <div class="otif-sub-Right">
+                    <div>Fill Rate General</div>
+                    <div>${appState.clients.length} Cuentas B2B</div>
+                </div>
+            </div>
+            <div class="otif-progress-track">
+                <div class="otif-progress-bar" style="width: ${Math.min(100, globalFillRatePct)}%; background: var(--brand-green-light);"></div>
+            </div>
+            <div class="otif-card-footer">
+                <span>L:${dayCounts.L} M:${dayCounts.M} K:${dayCounts.K} J:${dayCounts.J} V:${dayCounts.V} S:${dayCounts.S}</span>
+                <span>Andén Matutino</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderDashboardActionTables(baseList) {
+    // 1. Top 10 Generadores de Utilidad (Cash Cows)
+    const topBody = document.getElementById('dashTopProfitTableBody');
+    if (topBody) {
+        const top10 = [...baseList]
+            .sort((a, b) => (b.utilidadMensualCrc || 0) - (a.utilidadMensualCrc || 0))
+            .slice(0, 10);
+
+        topBody.innerHTML = top10.map(item => {
+            const mClass = item.margenReposicionPct >= 28 ? 'badge-success' : item.margenReposicionPct >= 18 ? 'badge-info' : 'badge-warning';
+            return `
+                <tr>
+                    <td style="white-space:nowrap;">
+                        <code style="font-weight:700; color:var(--brand-green);">${escapeHtml(item.sku)}</code>
+                        <span class="abc-badge abc-${item.abcClass}">${item.abcClass}</span>
+                    </td>
+                    <td>
+                        <div style="font-weight:700;">${escapeHtml(item.name)}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(item.subcategoria || item.categoria)} · ${formatNum(item.demandaMensualUnd)} ${escapeHtml(item.unidad)}/mes</div>
+                    </td>
+                    <td class="num-col" style="font-weight:600;">${formatCRC(item.ventasMensualesCrc)}</td>
+                    <td class="num-col" style="font-weight:800; color:var(--brand-lime);">${formatCRC(item.utilidadMensualCrc)}</td>
+                    <td class="center-col"><span class="badge ${mClass}">${formatPct(item.margenReposicionPct, 1)}</span></td>
+                    <td class="center-col">
+                        <button type="button" class="btn btn-secondary btn-sm btn-dash-quote-sku" data-sku="${escapeHtml(item.sku)}" title="Agregar SKU al Cotizador B2B" aria-label="Cotizar ${escapeHtml(item.name)}">
+                            <i class="fa-solid fa-cart-plus"></i> Cotizar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // 2. Top 10 SKUs en Erosión de Margen / Oportunidad de Captura
+    const critBody = document.getElementById('dashCriticalErosionTableBody');
+    if (critBody) {
+        const erosionList = [...baseList]
+            .map(item => {
+                const capture = Math.max(0, Math.round((item.precioSugeridoMeta - item.precioDetalle) * (item.demandaMensualUnd || 0)));
+                return { item, capture };
+            })
+            .filter(x => x.item.margenReposicionPct < 24 || x.item.varCostoPct >= 5 || x.capture > 0)
+            .sort((a, b) => {
+                if (a.item.margenReposicionPct < 16 && b.item.margenReposicionPct >= 16) return -1;
+                if (b.item.margenReposicionPct < 16 && a.item.margenReposicionPct >= 16) return 1;
+                return b.capture - a.capture;
+            })
+            .slice(0, 10);
+
+        if (erosionList.length === 0) {
+            critBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted); font-size:13px;">¡Excelente! Todos los SKUs filtrados cumplen la meta de rentabilidad sin erosión de margen.</td></tr>`;
+        } else {
+            critBody.innerHTML = erosionList.map(({ item, capture }) => {
+                const costAlert = item.varCostoPct > 0
+                    ? `<span style="color:var(--danger); font-weight:700;">COGS +${item.varCostoPct}%</span>`
+                    : `<span style="color:var(--text-muted);">COGS ${formatCRC(item.costoReposicion)}</span>`;
+                const mBadge = item.margenReposicionPct < 16 ? 'badge-danger' : 'badge-warning';
+
+                return `
+                    <tr>
+                        <td style="white-space:nowrap;">
+                            <code style="font-weight:700; color:var(--brand-green);">${escapeHtml(item.sku)}</code>
+                            <span class="abc-badge abc-${item.abcClass}">${item.abcClass}</span>
+                        </td>
+                        <td>
+                            <div style="font-weight:700;">${escapeHtml(item.name)}</div>
+                            <div style="font-size:11px;">${costAlert} · ${formatNum(item.demandaMensualUnd)} ${escapeHtml(item.unidad)}/mes</div>
+                        </td>
+                        <td class="num-col" style="white-space:nowrap;">
+                            <div style="font-weight:700;">${formatCRC(item.precioDetalle)}</div>
+                            <div style="font-size:11px; color:var(--brand-lime);">Meta: ${formatCRC(item.precioSugeridoMeta)}</div>
+                        </td>
+                        <td class="center-col"><span class="badge ${mBadge}">${formatPct(item.margenReposicionPct, 1)}</span></td>
+                        <td class="num-col" style="font-weight:700; color:var(--warning);">
+                            ${capture > 0 ? '+' + formatCRC(capture) : 'Revisar'}
+                        </td>
+                        <td class="center-col">
+                            <button type="button" class="btn btn-primary btn-sm btn-dash-fix-sku" data-sku="${escapeHtml(item.sku)}" title="Aplicar precio sugerido (${formatCRC(item.precioSugeridoMeta)}) en 1 clic" aria-label="Corregir precio de ${escapeHtml(item.name)}">
+                                <i class="fa-solid fa-bolt"></i> Nivelar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+}
+
+function renderDashboardCharts(catalogList) {
+    if (typeof Chart === 'undefined') {
+        window.addEventListener('load', () => renderDashboardCharts(getFilteredCatalog()), { once: true });
+        return;
+    }
+
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const textColor = isLight ? '#334155' : '#cbd5e1';
+    const gridColor = isLight ? 'rgba(148, 163, 184, 0.22)' : 'rgba(148, 163, 184, 0.1)';
+
+    // ------------------------------------------------------------------------
+    // GRÁFICO 1: Ingresos Mensuales (Miles ₡) vs. Margen (%) por Subcategoría
+    // ------------------------------------------------------------------------
+    const bySub = {};
+    catalogList.forEach(item => {
+        const key = item.subcategoria || item.categoria || 'Otros';
+        if (!bySub[key]) bySub[key] = { sales: 0, profit: 0 };
+        bySub[key].sales += item.ventasMensualesCrc || 0;
+        bySub[key].profit += item.utilidadMensualCrc || 0;
+    });
+
+    const topSubs = Object.keys(bySub)
+        .sort((a, b) => bySub[b].sales - bySub[a].sales)
+        .slice(0, 10);
+
+    const subSalesK = topSubs.map(k => Math.round(bySub[k].sales / 1000));
+    const subMargins = topSubs.map(k => bySub[k].sales > 0 ? Math.round((bySub[k].profit / bySub[k].sales) * 1000) / 10 : 0);
+
+    const ctxCat = document.getElementById('chartDashCategoryPL');
+    if (ctxCat) {
+        if (chartDashCatInstance) chartDashCatInstance.destroy();
+        chartDashCatInstance = new Chart(ctxCat, {
             type: 'bar',
             data: {
-                labels: catLabels,
+                labels: topSubs.map(s => s.length > 16 ? s.slice(0, 15) + '…' : s),
                 datasets: [
                     {
-                        label: 'Ventas Mensuales (Miles ₡)',
-                        data: salesData,
-                        backgroundColor: 'rgba(77, 184, 72, 0.72)',
-                        borderColor: '#4db848',
+                        label: 'Ingresos Mensuales (Miles ₡)',
+                        data: subSalesK,
+                        backgroundColor: 'rgba(35, 115, 70, 0.78)',
+                        borderColor: '#52c44c',
                         borderWidth: 1,
-                        borderRadius: 6,
+                        borderRadius: 5,
                         yAxisID: 'y'
                     },
                     {
                         label: 'Margen Bruto (%)',
-                        data: marginData,
+                        data: subMargins,
                         type: 'line',
                         borderColor: '#a3e635',
                         backgroundColor: '#a3e635',
                         borderWidth: 2.5,
+                        pointRadius: 3.5,
                         tension: 0.3,
                         yAxisID: 'y1'
                     }
@@ -1329,16 +1810,248 @@ function renderCommercialCharts(catalogList) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: '#94a3b8', font: { family: 'Outfit', size: 11 } } }
+                    legend: { labels: { color: textColor, font: { family: 'Manrope', size: 11 } } }
                 },
                 scales: {
-                    x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
-                    y: { position: 'left', ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
-                    y1: { position: 'right', min: 0, max: 50, ticks: { color: '#a3e635', callback: v => v + '%' }, grid: { display: false } }
+                    x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                    y: { position: 'left', ticks: { color: textColor, font: { size: 11 } }, grid: { color: gridColor } },
+                    y1: { position: 'right', min: 0, max: 50, ticks: { color: '#a3e635', font: { size: 11 }, callback: v => v + '%' }, grid: { display: false } }
                 }
             }
         });
     }
+
+    // ------------------------------------------------------------------------
+    // GRÁFICO 2: Concentración Pareto ABC (Ventas vs Utilidad vs SKUs %)
+    // ------------------------------------------------------------------------
+    const totalSalesAll = catalogList.reduce((s, x) => s + (x.ventasMensualesCrc || 0), 0) || 1;
+    const totalProfitAll = catalogList.reduce((s, x) => s + Math.max(0, x.utilidadMensualCrc || 0), 0) || 1;
+    const totalCountAll = catalogList.length || 1;
+
+    const abcClasses = ['A', 'B', 'C'];
+    const abcSalesShare = abcClasses.map(c => {
+        const sum = catalogList.filter(x => x.abcClass === c).reduce((s, x) => s + (x.ventasMensualesCrc || 0), 0);
+        return Math.round((sum / totalSalesAll) * 1000) / 10;
+    });
+    const abcProfitShare = abcClasses.map(c => {
+        const sum = catalogList.filter(x => x.abcClass === c).reduce((s, x) => s + Math.max(0, x.utilidadMensualCrc || 0), 0);
+        return Math.round((sum / totalProfitAll) * 1000) / 10;
+    });
+    const abcSkuShare = abcClasses.map(c => {
+        const cnt = catalogList.filter(x => x.abcClass === c).length;
+        return Math.round((cnt / totalCountAll) * 1000) / 10;
+    });
+
+    const ctxAbc = document.getElementById('chartDashAbcChannel');
+    if (ctxAbc) {
+        if (chartDashAbcInstance) chartDashAbcInstance.destroy();
+        chartDashAbcInstance = new Chart(ctxAbc, {
+            type: 'bar',
+            data: {
+                labels: ['Clase A (Alta Rotación)', 'Clase B (Media)', 'Clase C (Complemento)'],
+                datasets: [
+                    {
+                        label: '% Ingresos (₡)',
+                        data: abcSalesShare,
+                        backgroundColor: 'rgba(35, 115, 70, 0.85)',
+                        borderRadius: 5
+                    },
+                    {
+                        label: '% Utilidad Bruta (₡)',
+                        data: abcProfitShare,
+                        backgroundColor: 'rgba(163, 230, 53, 0.82)',
+                        borderRadius: 5
+                    },
+                    {
+                        label: '% Cantidad de SKUs',
+                        data: abcSkuShare,
+                        backgroundColor: 'rgba(56, 189, 248, 0.72)',
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: textColor, font: { family: 'Manrope', size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                    y: { min: 0, max: 100, ticks: { color: textColor, font: { size: 11 }, callback: v => v + '%' }, grid: { color: gridColor } }
+                }
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------
+    // GRÁFICO 3: Benchmark Competitivo (Interfrutd vs Supermercados & CENADA)
+    // ------------------------------------------------------------------------
+    const benchItems = catalogList
+        .filter(x => x.precioCompetenciaProm > 0 && x.cenadaModa > 0)
+        .sort((a, b) => (b.ventasMensualesCrc || 0) - (a.ventasMensualesCrc || 0))
+        .slice(0, 8);
+
+    const ctxBench = document.getElementById('chartDashBenchmark');
+    if (ctxBench) {
+        if (chartDashBenchInstance) chartDashBenchInstance.destroy();
+        chartDashBenchInstance = new Chart(ctxBench, {
+            type: 'bar',
+            data: {
+                labels: benchItems.map(x => x.name.length > 14 ? x.name.slice(0, 13) + '…' : x.name),
+                datasets: [
+                    {
+                        label: 'PIMA CENADA (Mayorista)',
+                        data: benchItems.map(x => x.cenadaModa),
+                        backgroundColor: 'rgba(148, 163, 184, 0.55)',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Interfrutd Supermercado',
+                        data: benchItems.map(x => x.precioSupermercado),
+                        backgroundColor: 'rgba(35, 115, 70, 0.9)',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Prom. Supermercados (AM/WM/MxM)',
+                        data: benchItems.map(x => x.precioCompetenciaProm),
+                        backgroundColor: 'rgba(245, 158, 11, 0.78)',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: textColor, font: { family: 'Manrope', size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                    y: { ticks: { color: textColor, font: { size: 11 }, callback: v => '₡' + v }, grid: { color: gridColor } }
+                }
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------
+    // GRÁFICO 4: Carga Logística Semanal (Lunes a Sábado) & Meta SLA
+    // ------------------------------------------------------------------------
+    const daysOrder = [
+        { code: 'L', label: 'Lunes' },
+        { code: 'M', label: 'Martes' },
+        { code: 'K', label: 'Miércoles' },
+        { code: 'J', label: 'Jueves' },
+        { code: 'V', label: 'Viernes' },
+        { code: 'S', label: 'Sábado' }
+    ];
+
+    const clientsPerDay = daysOrder.map(d => {
+        return appState.clients.filter(c => (c.diasEntrega || []).includes(d.code)).length;
+    });
+    const avgSlaPerDay = daysOrder.map(d => {
+        const clis = appState.clients.filter(c => (c.diasEntrega || []).includes(d.code));
+        if (clis.length === 0) return 96;
+        return Math.round((clis.reduce((s, c) => s + (c.slaMeta || 96), 0) / clis.length) * 10) / 10;
+    });
+
+    const ctxWeek = document.getElementById('chartDashWeeklyLoad');
+    if (ctxWeek) {
+        if (chartDashWeeklyInstance) chartDashWeeklyInstance.destroy();
+        chartDashWeeklyInstance = new Chart(ctxWeek, {
+            type: 'bar',
+            data: {
+                labels: daysOrder.map(d => d.label),
+                datasets: [
+                    {
+                        label: 'Clientes B2B Programados',
+                        data: clientsPerDay,
+                        backgroundColor: 'rgba(56, 189, 248, 0.72)',
+                        borderColor: '#38bdf8',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Meta SLA OTIF (%)',
+                        data: avgSlaPerDay,
+                        type: 'line',
+                        borderColor: '#52c44c',
+                        backgroundColor: '#52c44c',
+                        borderWidth: 2.5,
+                        pointRadius: 3.5,
+                        tension: 0.25,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: textColor, font: { family: 'Manrope', size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+                    y: { position: 'left', beginAtZero: true, ticks: { color: textColor, stepSize: 1, font: { size: 11 } }, grid: { color: gridColor } },
+                    y1: { position: 'right', min: 85, max: 100, ticks: { color: '#52c44c', font: { size: 11 }, callback: v => v + '%' }, grid: { display: false } }
+                }
+            }
+        });
+    }
+}
+
+function exportDashboardDossierExcel() {
+    const baseList = getFilteredCatalog();
+    baseList.forEach(recalcSkuMetrics);
+
+    const plRows = baseList.map(x => ({
+        SKU: x.sku,
+        Producto: x.name,
+        Categoria: x.categoria,
+        Subcategoria: x.subcategoria || x.categoria,
+        Clase_ABC: x.abcClass,
+        Demanda_Mensual_Und: x.demandaMensualUnd,
+        Precio_Detalle_CRC: x.precioDetalle,
+        Precio_Sugerido_Meta_CRC: x.precioSugeridoMeta,
+        Costo_Reposicion_COGS_CRC: x.costoReposicion,
+        Ingresos_Mensuales_CRC: x.ventasMensualesCrc,
+        Costo_Mensual_COGS_CRC: x.costoMensualCrc,
+        Utilidad_Mensual_CRC: x.utilidadMensualCrc,
+        Margen_Reposicion_Pct: x.margenReposicionPct,
+        Potencial_Captura_Mensual_CRC: Math.max(0, Math.round((x.precioSugeridoMeta - x.precioDetalle) * (x.demandaMensualUnd || 0))),
+        Estado_Diagnostico: x.estadoPrecio
+    }));
+
+    const benchRows = baseList.filter(x => x.precioCompetenciaMin > 0 || x.cenadaModa > 0).map(x => ({
+        SKU: x.sku,
+        Producto: x.name,
+        Precio_Interfrutd_Supermercado: x.precioSupermercado,
+        Precio_Interfrutd_Detalle: x.precioDetalle,
+        PIMA_CENADA_Moda: x.cenadaModa,
+        AutoMercado: x.precioAutoMercado,
+        Walmart: x.precioWalmart,
+        MasxMenos: x.precioMasxMenos,
+        Competencia_Min: x.precioCompetenciaMin,
+        Competencia_Prom: x.precioCompetenciaProm
+    }));
+
+    const clientRows = appState.clients.map(c => ({
+        ID_Cliente: c.id,
+        Cliente_Corporativo: c.nombre,
+        Segmento: c.segmento,
+        Lista_Asignada: c.listaAsignada,
+        Ruta: c.ruta,
+        Ventana_Anden: c.ventanaAnden || '05:30 AM – 07:00 AM',
+        Dias_Entrega: (c.diasEntrega || []).join(', '),
+        Meta_SLA_Pct: c.slaMeta
+    }));
+
+    exportMultiSheetExcel([
+        { name: 'PL_Rentabilidad_SKUs', data: plRows },
+        { name: 'Benchmark_Supermercados', data: benchRows },
+        { name: 'Programacion_Clientes_B2B', data: clientRows }
+    ], 'Interfrutd_Dossier_Ejecutivo_Full_Dashboard_360.xlsx');
 }
 
 // ============================================================================
@@ -1346,6 +2059,7 @@ function renderCommercialCharts(catalogList) {
 // ============================================================================
 function renderActiveModule() {
     renderPricingModule();
+    if (appState.activeTab === 'dashboard') renderDashboardModule();
     if (appState.activeTab === 'cotizaciones') renderQuotesModule();
     if (appState.activeTab === 'ordenes') renderOrdersAndInventoryModule();
 }
@@ -1417,12 +2131,132 @@ function setupEvents() {
             html.setAttribute('data-theme', next);
             const icon = document.getElementById('iconThemeToggle');
             if (icon) icon.className = next === 'light' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+            renderActiveModule();
             showToast(`Modo visual cambiado a ${next === 'light' ? 'Claro Corporativo' : 'Oscuro Ejecutivo'}`, 'fa-palette');
         });
     }
 
     // ------------------------------------------------------------------------
-    // Eventos Módulo 1: Pricing & Listas
+    // Eventos Módulo 1 (Inicio): Full Dashboard BI 360°
+    // ------------------------------------------------------------------------
+    document.querySelectorAll('#dashPlGroupMode .chip-btn').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('#dashPlGroupMode .chip-btn').forEach(c => {
+                c.classList.remove('active');
+                c.setAttribute('aria-pressed', 'false');
+            });
+            chip.classList.add('active');
+            chip.setAttribute('aria-pressed', 'true');
+            appState.dashPlGroupMode = chip.getAttribute('data-plgroup') || 'SUBCATEGORIA';
+            renderDashboardModule();
+        });
+    });
+
+    const btnDashOpt = document.getElementById('btnDashOptimizeAll');
+    if (btnDashOpt) {
+        btnDashOpt.addEventListener('click', () => {
+            let count = 0;
+            let capturedCrc = 0;
+            let saved = {};
+            try {
+                saved = JSON.parse(localStorage.getItem('interfrutd_price_overrides') || '{}');
+            } catch (err) {}
+
+            appState.catalog.forEach(item => {
+                if (item.margenReposicionPct < 20 || item.precioDetalle < item.precioSugeridoMeta) {
+                    const gain = Math.max(0, Math.round((item.precioSugeridoMeta - item.precioDetalle) * (item.demandaMensualUnd || 0)));
+                    capturedCrc += gain;
+                    item.precioDetalle = item.precioSugeridoMeta;
+                    saved[item.sku] = item.precioDetalle;
+                    recalcSkuMetrics(item);
+                    count++;
+                }
+            });
+
+            try {
+                localStorage.setItem('interfrutd_price_overrides', JSON.stringify(saved));
+            } catch (err) {}
+
+            renderActiveModule();
+            showToast(`${count} SKUs optimizados a margen meta (+${formatCRC(capturedCrc)}/mes capturados)`, 'fa-wand-magic-sparkles');
+        });
+    }
+
+    const btnDashPricing = document.getElementById('btnDashGoToPricing');
+    if (btnDashPricing) {
+        btnDashPricing.addEventListener('click', () => {
+            document.querySelector('.module-tab-btn[data-tab="pricing"]')?.click();
+        });
+    }
+
+    const btnDashQuotes = document.getElementById('btnDashGoToQuotes');
+    if (btnDashQuotes) {
+        btnDashQuotes.addEventListener('click', () => {
+            document.querySelector('.module-tab-btn[data-tab="cotizaciones"]')?.click();
+        });
+    }
+
+    const btnDashExcel = document.getElementById('btnExportDashboardExcel');
+    if (btnDashExcel) {
+        btnDashExcel.addEventListener('click', exportDashboardDossierExcel);
+    }
+
+    const dashTopBody = document.getElementById('dashTopProfitTableBody');
+    if (dashTopBody) {
+        dashTopBody.addEventListener('click', (e) => {
+            const btnQuote = e.target.closest('.btn-dash-quote-sku');
+            if (btnQuote) {
+                const sku = btnQuote.getAttribute('data-sku');
+                const item = appState.catalog.find(x => x.sku === sku);
+                if (item) {
+                    const existing = appState.activeQuoteDraft.items.find(x => x.sku === sku);
+                    if (existing) {
+                        existing.cantidad += 20;
+                    } else {
+                        const basePrice = getSkuPriceForList(item, appState.activeQuoteDraft.listaPrecio);
+                        appState.activeQuoteDraft.items.push({
+                            sku: item.sku,
+                            name: item.name,
+                            unidad: item.unidad,
+                            cantidad: 25,
+                            costoUnit: item.costoReposicion,
+                            precioLista: basePrice,
+                            descuentoPct: 0,
+                            precioFinal: basePrice
+                        });
+                    }
+                    showToast(`${item.name} agregado al Cotizador B2B`, 'fa-cart-plus');
+                    document.querySelector('.module-tab-btn[data-tab="cotizaciones"]')?.click();
+                }
+            }
+        });
+    }
+
+    const dashCritBody = document.getElementById('dashCriticalErosionTableBody');
+    if (dashCritBody) {
+        dashCritBody.addEventListener('click', (e) => {
+            const btnFix = e.target.closest('.btn-dash-fix-sku');
+            if (btnFix) {
+                const sku = btnFix.getAttribute('data-sku');
+                const item = appState.catalog.find(x => x.sku === sku);
+                if (item) {
+                    const gain = Math.max(0, Math.round((item.precioSugeridoMeta - item.precioDetalle) * (item.demandaMensualUnd || 0)));
+                    item.precioDetalle = item.precioSugeridoMeta;
+                    recalcSkuMetrics(item);
+                    try {
+                        const saved = JSON.parse(localStorage.getItem('interfrutd_price_overrides') || '{}');
+                        saved[sku] = item.precioDetalle;
+                        localStorage.setItem('interfrutd_price_overrides', JSON.stringify(saved));
+                    } catch (err) {}
+                    renderActiveModule();
+                    showToast(`SKU ${item.sku} nivelado a ${formatCRC(item.precioDetalle)} (+${formatCRC(gain)}/mes)`, 'fa-bolt');
+                }
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------
+    // Eventos Módulo 2: Pricing & Listas
     // ------------------------------------------------------------------------
     const selChannel = document.getElementById('selectPriceListChannel');
     if (selChannel) {

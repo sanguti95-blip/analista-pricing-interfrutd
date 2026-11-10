@@ -70,21 +70,27 @@
     <nav class="nav-bar" aria-label="Módulos del Sistema Comercial">
         <div class="nav-bar-inner">
             <div class="module-tabs" role="tablist">
-                <button type="button" class="module-tab-btn active" data-tab="pricing" role="tab" aria-selected="true">
+                <button type="button" class="module-tab-btn active" data-tab="dashboard" role="tab" aria-selected="true">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>1. Full Dashboard BI</span>
+                    <span class="tab-counter" id="badgeDashboardScore">360°</span>
+                </button>
+
+                <button type="button" class="module-tab-btn" data-tab="pricing" role="tab" aria-selected="false">
                     <i class="fa-solid fa-tags"></i>
-                    <span>1. Pricing, Costos & Listas</span>
+                    <span>2. Pricing, Costos & Listas</span>
                     <span class="tab-counter" id="badgeCountPricing">211</span>
                 </button>
 
                 <button type="button" class="module-tab-btn" data-tab="cotizaciones" role="tab" aria-selected="false">
                     <i class="fa-solid fa-file-invoice-dollar"></i>
-                    <span>2. Cotizador Comercial B2B</span>
+                    <span>3. Cotizador Comercial B2B</span>
                     <span class="tab-counter" id="badgeCountQuotes">3</span>
                 </button>
 
                 <button type="button" class="module-tab-btn" data-tab="ordenes" role="tab" aria-selected="false">
                     <i class="fa-solid fa-calendar-check"></i>
-                    <span>3. Programación, Clientes & OCs</span>
+                    <span>4. Programación, Clientes & OCs</span>
                     <span class="tab-counter" id="badgeCountOC">6</span>
                 </button>
             </div>
@@ -112,9 +118,193 @@
     <main class="workspace-container">
 
         <!-- ============================================================== -->
-        <!-- MÓDULO 1: PRICING, COSTOS, LISTAS DE PRECIOS & BENCHMARK        -->
+        <!-- MÓDULO 1 (INICIO): FULL DASHBOARD BI — TORRE DE CONTROL 360°    -->
         <!-- ============================================================== -->
-        <section id="panel-pricing" class="tab-panel active" role="tabpanel">
+        <section id="panel-dashboard" class="tab-panel active" role="tabpanel">
+            <!-- 1. Macro-KPIs Ejecutivos 360° -->
+            <div class="kpi-grid" id="dashboardKpiGrid"></div>
+
+            <!-- 2. Barra Ejecutiva de Captura de Valor & Acciones Rápidas -->
+            <div class="chain-margin-panel compact-bar" id="dashboardExecCommandBar">
+                <div class="chain-bar-label">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Torre de Control Comercial &amp; P&amp;L:</span>
+                </div>
+                <div id="dashboardQuickInsightText" style="flex:1; font-size:13px; color:var(--text-secondary);">
+                    Sincronizando métricas financieras, posicionamiento competitivo y nivel de servicio OTIF...
+                </div>
+                <div class="filter-group">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnDashOptimizeAll" title="Ajustar automáticamente los SKUs con margen crítico al precio sugerido meta">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--brand-lime);"></i> Capturar Utilidad (+₡)
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnDashGoToPricing" title="Ir a la Matriz Maestra de Precios">
+                        <i class="fa-solid fa-tags"></i> Ir a Pricing
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnDashGoToQuotes" title="Abrir Cotizador Comercial B2B">
+                        <i class="fa-solid fa-file-invoice-dollar"></i> Nueva Cotización
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnExportDashboardExcel" title="Descargar Dossier Ejecutivo BI en Excel (.xlsx)">
+                        <i class="fa-solid fa-file-excel"></i> Exportar Dossier BI (.xlsx)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Fila 1 de Gráficos Interactivos: P&L por Categoría + Pareto ABC / Mix Canal -->
+            <div class="charts-grid-2">
+                <div class="section-card" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <span>Ingresos Mensuales (₡) vs. Margen Bruto (%) por Subcategoría</span>
+                        </h2>
+                        <span class="badge badge-info">Top 10 Subcategorías</span>
+                    </div>
+                    <div style="height:270px; position:relative;">
+                        <canvas id="chartDashCategoryPL"></canvas>
+                    </div>
+                </div>
+
+                <div class="section-card" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Concentración Pareto ABC (80/15/5) &amp; Rentabilidad por Canal</span>
+                        </h2>
+                        <span class="badge badge-success">Estructura de Valor</span>
+                    </div>
+                    <div style="height:270px; position:relative;">
+                        <canvas id="chartDashAbcChannel"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Fila 2 de Gráficos Interactivos: Benchmark Competitivo + Carga Semanal OTIF -->
+            <div class="charts-grid-2">
+                <div class="section-card" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                            <span>Benchmark Competitivo: Interfrutd vs. Supermercados &amp; PIMA CENADA</span>
+                        </h2>
+                        <span class="badge badge-warning">Monitoreo Retail &amp; Mayorista</span>
+                    </div>
+                    <div style="height:270px; position:relative;">
+                        <canvas id="chartDashBenchmark"></canvas>
+                    </div>
+                </div>
+
+                <div class="section-card" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fa-solid fa-truck-fast"></i>
+                            <span>Carga Logística Semanal (Lunes a Sábado) &amp; Flujo B2B</span>
+                        </h2>
+                        <span class="badge badge-info">Despacho Contra Pedido</span>
+                    </div>
+                    <div style="height:270px; position:relative;">
+                        <canvas id="chartDashWeeklyLoad"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Estado de Resultados Comercial (P&L Consolidado y Simulador de Captura) -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-table-list"></i>
+                        <span>Estado de Resultados Comercial (P&amp;L Mensual, COGS y Potencial de Captura)</span>
+                    </h2>
+                    <div class="filter-group" id="dashPlGroupMode" role="group" aria-label="Agrupación del Estado de Resultados P&L">
+                        <button type="button" class="chip-btn active" data-plgroup="SUBCATEGORIA" aria-pressed="true">Por Subcategoría</button>
+                        <button type="button" class="chip-btn" data-plgroup="CATEGORIA" aria-pressed="false">Por Macro-Categoría</button>
+                        <button type="button" class="chip-btn" data-plgroup="ABC" aria-pressed="false">Por Pareto ABC</button>
+                    </div>
+                </div>
+
+                <div class="table-scroll" style="max-height:380px;">
+                    <table class="data-table" id="dashboardPlTable">
+                        <thead>
+                            <tr>
+                                <th>Segmento / Agrupación</th>
+                                <th class="center-col">SKUs (A/B/C)</th>
+                                <th class="num-col">Volumen Mensual</th>
+                                <th class="num-col">Ingresos Brutos (₡)</th>
+                                <th class="num-col">Costo Ventas COGS (₡)</th>
+                                <th class="num-col">Utilidad Bruta (₡)</th>
+                                <th class="center-col">Margen Real vs. Meta</th>
+                                <th class="num-col">Potencial Captura (+₡/mes)</th>
+                                <th class="center-col">Diagnóstico P&amp;L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardPlTableBody"></tbody>
+                        <tfoot id="dashboardPlTableFoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 6. Salud Operativa 360°: CEDI, Riesgo de Stock, Embudo B2B y Frecuencia Semanal -->
+            <div class="otif-grid otif-row-4" id="dashOperationalGrid" style="margin-bottom:16px;"></div>
+
+            <!-- 7. Tablas Duales de Acción Inmediata: Top 10 Generadores de Utilidad vs. Top 10 Erosión de Margen -->
+            <div class="charts-grid-2">
+                <!-- Top 10 Generadores de Utilidad -->
+                <div class="section-card" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fa-solid fa-trophy" style="color:var(--brand-lime);"></i>
+                            <span>Top 10 SKUs Generadores de Utilidad (Cash Cows)</span>
+                        </h2>
+                        <span class="badge badge-success">Mayor Contribución ₡</span>
+                    </div>
+                    <div class="table-scroll" style="max-height:380px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Producto &amp; Categoría</th>
+                                    <th class="num-col">Ventas / Mes</th>
+                                    <th class="num-col">Utilidad / Mes</th>
+                                    <th class="center-col">Margen</th>
+                                    <th class="center-col">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashTopProfitTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top 10 SKUs en Erosión / Oportunidad de Alza -->
+                <div class="section-card" style="margin-bottom:0;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i>
+                            <span>Top 10 SKUs con Erosión de Margen / Alza de Costo</span>
+                        </h2>
+                        <span class="badge badge-danger">Acción Correctiva</span>
+                    </div>
+                    <div class="table-scroll" style="max-height:380px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Producto &amp; Alerta COGS</th>
+                                    <th class="num-col">Actual vs. Meta</th>
+                                    <th class="center-col">Margen Actual</th>
+                                    <th class="num-col">Captura (+₡/mes)</th>
+                                    <th class="center-col">Corregir</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashCriticalErosionTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- MÓDULO 2: PRICING, COSTOS, LISTAS DE PRECIOS & BENCHMARK        -->
+        <!-- ============================================================== -->
+        <section id="panel-pricing" class="tab-panel" role="tabpanel">
             <div class="kpi-grid" id="pricingKpiGrid"></div>
 
             <!-- Barra Compacta de Márgenes por Canal (1 sola línea ejecutiva) -->
